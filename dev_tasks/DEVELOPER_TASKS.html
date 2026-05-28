@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ADONIS — Задачи для разработчика</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #ffffff;
+      color: #1a1a2e;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 48px;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 24px;
+      border-bottom: 3px solid #7c3aed;
+      margin-bottom: 32px;
+    }
+    .header-left h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #7c3aed;
+      letter-spacing: -0.5px;
+    }
+    .header-left p {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+    .header-right {
+      text-align: right;
+    }
+    .header-right .badge {
+      display: inline-block;
+      background: #7c3aed;
+      color: #fff;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .header-right .date {
+      font-size: 11px;
+      color: #999;
+      margin-top: 6px;
+    }
+
+    /* INTRO */
+    .intro-box {
+      background: #f5f3ff;
+      border-left: 4px solid #7c3aed;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+    }
+    .intro-box p { color: #4c1d95; font-size: 13px; }
+    .intro-box strong { color: #6d28d9; }
+
+    /* SECTION */
+    .section { margin-bottom: 36px; }
+    .section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #1a1a2e;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 900;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .phase-1 .num { background: #059669; }
+    .phase-2 .num { background: #2563eb; }
+    .phase-3 .num { background: #7c3aed; }
+    .phase-4 .num { background: #d97706; }
+    .phase-5 .num { background: #db2777; }
+    .phase-6 .num { background: #dc2626; }
+
+    /* PHASE CARD */
+    .phase-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .phase-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .phase-1 .phase-header { background: #ecfdf5; }
+    .phase-2 .phase-header { background: #eff6ff; }
+    .phase-3 .phase-header { background: #f5f3ff; }
+    .phase-4 .phase-header { background: #fffbeb; }
+    .phase-5 .phase-header { background: #fdf2f8; }
+    .phase-6 .phase-header { background: #fff1f2; }
+    .phase-header-left { display: flex; align-items: center; gap: 10px; }
+    .phase-emoji { font-size: 20px; }
+    .phase-name { font-size: 15px; font-weight: 700; color: #1a1a2e; }
+    .phase-sub { font-size: 11px; color: #6b7280; font-weight: 400; margin-top: 1px; }
+    .phase-time {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .phase-1 .phase-time { background: #d1fae5; color: #065f46; }
+    .phase-2 .phase-time { background: #dbeafe; color: #1e40af; }
+    .phase-3 .phase-time { background: #ede9fe; color: #4c1d95; }
+    .phase-4 .phase-time { background: #fef3c7; color: #92400e; }
+    .phase-5 .phase-time { background: #fce7f3; color: #9d174d; }
+    .phase-6 .phase-time { background: #fee2e2; color: #991b1b; }
+    .phase-body { padding: 16px 20px; }
+
+    /* TASKS LIST */
+    .task-list { list-style: none; margin-bottom: 12px; }
+    .task-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px dashed #f3f4f6;
+      font-size: 12.5px;
+      color: #374151;
+    }
+    .task-list li:last-child { border-bottom: none; }
+    .task-list li::before {
+      content: '✦';
+      color: #9ca3af;
+      font-size: 9px;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .task-list li strong { color: #111827; }
+    .task-list li code {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      color: #7c3aed;
+    }
+
+    /* RESULT BOX */
+    .result-box {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+    }
+    .result-box strong { color: #059669; }
+
+    /* ENV TABLE */
+    .env-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .env-table th {
+      background: #f3f4f6;
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 700;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+    }
+    .env-table td {
+      padding: 8px 12px;
+      border: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+    .env-table code {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #7c3aed;
+      background: #f5f3ff;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .env-table .source { color: #2563eb; font-size: 11px; }
+
+    /* PROJECT STRUCTURE */
+    .file-tree {
+      background: #1a1a2e;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+    .file-tree .dir { color: #818cf8; font-weight: 700; }
+    .file-tree .file-new { color: #34d399; }
+    .file-tree .file-mod { color: #fbbf24; }
+    .file-tree .file-exist { color: #94a3b8; }
+    .file-tree .comment { color: #475569; font-style: italic; }
+
+    /* CHECKLIST */
+    .checklist {
+      list-style: none;
+    }
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 12.5px;
+    }
+    .checklist li:nth-child(odd) { background: #f9fafb; }
+    .checklist .box {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #d1d5db;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* DB TABLES */
+    .db-table-block {
+      background: #f8faff;
+      border: 1px solid #e0e7ff;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+    }
+    .db-table-block h4 { font-size: 13px; font-weight: 700; color: #3730a3; margin-bottom: 8px; }
+    .db-cols { display: flex; flex-wrap: wrap; gap: 6px; }
+    .db-col {
+      background: #ede9fe;
+      border-radius: 4px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      color: #4c1d95;
+    }
+    .db-col.key { background: #fef3c7; color: #92400e; }
+    .db-col.fk { background: #dbeafe; color: #1e40af; }
+
+    /* CONTACTS / LINKS */
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .link-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .link-card h4 { font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 4px; }
+    .link-card a { color: #2563eb; font-size: 12px; word-break: break-all; }
+    .link-card p { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+    /* TECH STACK */
+    .stack-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .pill {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #374151;
+    }
+    .pill.main { background: #ede9fe; border-color: #c4b5fd; color: #6d28d9; }
+
+    /* STATUS BADGE */
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .status-done { background: #d1fae5; color: #065f46; }
+    .status-wait { background: #fef3c7; color: #92400e; }
+    .status-todo { background: #fee2e2; color: #991b1b; }
+
+    /* PRIORITY */
+    .priority-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 8px;
+    }
+    .priority-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .p1 .priority-num { background: #dc2626; }
+    .p2 .priority-num { background: #d97706; }
+    .p3 .priority-num { background: #2563eb; }
+    .p4 .priority-num { background: #059669; }
+    .p5 .priority-num { background: #7c3aed; }
+    .priority-text { flex: 1; font-size: 12.5px; color: #374151; }
+    .priority-text strong { display: block; color: #111827; font-size: 13px; }
+
+    /* FOOTER */
+    .footer {
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer p { font-size: 11px; color: #9ca3af; }
+    .footer strong { color: #7c3aed; }
+
+    /* PRINT */
+    @media print {
+      body { background: white; }
+      .page { padding: 20px 30px; }
+      .phase-card { break-inside: avoid; }
+      .section { break-inside: avoid; }
+    }
+
+    /* DIVIDER */
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, #7c3aed33, #7c3aed, #7c3aed33);
+      margin: 32px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>⚡ ADONIS AI Platform</h1>
+      <p>Техническое задание для разработчика · Полный запуск проекта</p>
+    </div>
+    <div class="header-right">
+      <div class="badge">Dev Tasks v1.0</div>
+      <div class="date">Составлено: 27 мая 2026</div>
+    </div>
+  </div>
+
+  <!-- INTRO -->
+  <div class="intro-box">
+    <p>
+      <strong>Проект:</strong> ADONIS — AI-платформа для управления контентом франшизы.<br/>
+      <strong>Текущее состояние:</strong> UI полностью готов (10 страниц), API-роуты написаны, но работают с mock-данными.
+      Нужно подключить реальные сервисы по этапам.<br/>
+      <strong>Стек:</strong> Next.js 14 App Router · TypeScript · Tailwind CSS · Framer Motion · Supabase · Anthropic Claude API
+    </p>
+  </div>
+
+  <!-- TECH STACK -->
+  <div class="section">
+    <div class="section-title">📦 Технический стек</div>
+    <div class="stack-pills">
+      <span class="pill main">Next.js 14</span>
+      <span class="pill main">TypeScript</span>
+      <span class="pill main">Tailwind CSS</span>
+      <span class="pill main">Framer Motion</span>
+      <span class="pill">Supabase (PostgreSQL)</span>
+      <span class="pill">Anthropic Claude API</span>
+      <span class="pill">Lucide React Icons</span>
+      <span class="pill">Vercel (деплой)</span>
+      <span class="pill">Telegram Bot API</span>
+      <span class="pill">Instagram Graph API</span>
+      <span class="pill">TikTok for Developers</span>
+    </div>
+  </div>
+
+  <!-- PROJECT STRUCTURE -->
+  <div class="section">
+    <div class="section-title">🗂 Структура проекта</div>
+    <div class="file-tree">
+<span class="dir">adonis_franchiza/</span>
+├── <span class="dir">app/</span>
+│   ├── <span class="dir">api/</span>
+│   │   ├── <span class="file-exist">generate/route.ts</span>       <span class="comment">← Claude AI — написан, нужен API ключ</span>
+│   │   ├── <span class="file-exist">content/route.ts</span>        <span class="comment">← история контента — написан, нужен Supabase</span>
+│   │   └── <span class="file-exist">leads/route.ts</span>          <span class="comment">← лиды — написан, нужен Supabase</span>
+│   ├── <span class="file-exist">dashboard/page.tsx</span>          <span class="comment">← готов (mock-данные)</span>
+│   ├── <span class="file-exist">trends/page.tsx</span>             <span class="comment">← готов (mock-данные)</span>
+│   ├── <span class="file-exist">generator/page.tsx</span>          <span class="comment">← готов, ждёт Anthropic key</span>
+│   ├── <span class="file-mod">video-factory/page.tsx</span>      <span class="comment">← готов + AUTO-WAVE блок добавлен</span>
+│   ├── <span class="file-exist">autopost/page.tsx</span>           <span class="comment">← готов (mock-данные)</span>
+│   ├── <span class="file-exist">analytics/page.tsx</span>          <span class="comment">← готов (mock-данные)</span>
+│   ├── <span class="file-new">channels/page.tsx</span>           <span class="comment">← НОВАЯ: подключение платформ</span>
+│   ├── <span class="file-new">analysis/page.tsx</span>           <span class="comment">← НОВАЯ: анализ конкурентов</span>
+│   ├── <span class="file-new">brand/page.tsx</span>              <span class="comment">← НОВАЯ: настройки бренда</span>
+│   └── <span class="file-exist">settings/page.tsx</span>
+├── <span class="dir">components/</span>
+│   └── <span class="dir">layout/</span>
+│       └── <span class="file-mod">Sidebar.tsx</span>             <span class="comment">← обновлён: +3 пункта меню</span>
+├── <span class="dir">lib/</span>
+│   └── <span class="file-exist">mock-data.ts</span>                <span class="comment">← mock-данные для всех страниц</span>
+├── <span class="file-exist">.env.local</span>                     <span class="comment">← ⚠️ НУЖНО ЗАПОЛНИТЬ РЕАЛЬНЫМИ КЛЮЧАМИ</span>
+└── <span class="file-exist">package.json</span>
+    </div>
+    <div style="margin-top: 8px; font-size: 11px; color: #6b7280;">
+      <span style="color:#34d399">■</span> зелёный = новый файл &nbsp;
+      <span style="color:#fbbf24">■</span> жёлтый = изменён &nbsp;
+      <span style="color:#94a3b8">■</span> серый = существующий
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ENV VARIABLES -->
+  <div class="section">
+    <div class="section-title">🔑 Переменные окружения (.env.local)</div>
+    <p style="font-size:12px; color:#6b7280; margin-bottom:10px;">Файл <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:11px;">.env.local</code> находится в корне проекта. Все значения — placeholder, нужно заменить на реальные:</p>
+    <table class="env-table">
+      <thead>
+        <tr>
+          <th>Переменная</th>
+          <th>Где получить</th>
+          <th>Приоритет</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ANTHROPIC_API_KEY</code></td>
+          <td><span class="source">console.anthropic.com → API Keys</span></td>
+          <td><span class="status status-todo">Этап 1</span></td>
+        </tr>
+        <tr>
+          <td><code>NEXT_PUBLIC_SUPABASE_URL</code></td>
+          <td><span class="source">supabase.com → Project Settings → API</span></td>
+          <td><span class="status status-todo">Этап 2</span></td>
+        </tr>
+        <tr>
+          <td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td>
+          <td><span class="source">supabase.com → Project Settings → API</span></td>
+          <td><span class="status status-todo">Этап 2</span></td>
+        </tr>
+        <tr>
+          <td><code>SUPABASE_SERVICE_ROLE_KEY</code></td>
+          <td><span class="source">supabase.com → Project Settings → API</span></td>
+          <td><span class="status status-todo">Этап 2</span></td>
+        </tr>
+        <tr>
+          <td><code>TELEGRAM_BOT_TOKEN</code></td>
+          <td><span class="source">t.me/BotFather → /newbot</span></td>
+          <td><span class="status status-wait">Этап 4</span></td>
+        </tr>
+        <tr>
+          <td><code>TELEGRAM_CHANNEL_ID</code></td>
+          <td><span class="source">ID канала начинается с -100...</span></td>
+          <td><span class="status status-wait">Этап 4</span></td>
+        </tr>
+        <tr>
+          <td><code>INSTAGRAM_ACCESS_TOKEN</code></td>
+          <td><span class="source">developers.facebook.com → Graph API</span></td>
+          <td><span class="status status-done">Этап 5</span></td>
+        </tr>
+        <tr>
+          <td><code>TIKTOK_CLIENT_KEY</code></td>
+          <td><span class="source">developers.tiktok.com</span></td>
+          <td><span class="status status-done">Этап 5</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- PHASES -->
+  <div class="section">
+    <div class="section-title">🚀 Этапы запуска</div>
+
+    <!-- PHASE 1 -->
+    <div class="phase-card phase-1">
+      <div class="phase-header">
+        <div class="phase-header-left">
+          <span class="phase-emoji">🤖</span>
+          <div>
+            <div class="phase-name">Этап 1 — AI Генератор</div>
+            <div class="phase-sub">Anthropic Claude API · /generator страница оживает</div>
+          </div>
+        </div>
+        <span class="phase-time">⏱ 10-15 минут</span>
+      </div>
+      <div class="phase-body">
+        <ul class="task-list">
+          <li>Зарегистрироваться на <strong>console.anthropic.com</strong> (только email, без телефона)</li>
+          <li>Создать API ключ: Settings → API Keys → Create Key</li>
+          <li>Пополнить баланс: минимум <strong>$5</strong> (хватит на ~2000 запросов)</li>
+          <li>Открыть <code>.env.local</code> и заменить <code>ANTHROPIC_API_KEY=your_anthropic_api_key_here</code> на реальный ключ</li>
+          <li>Перезапустить сервер: <code>npm run dev</code></li>
+          <li>Проверить: зайти на <code>/generator</code> и нажать «Генерировать»</li>
+        </ul>
+        <div class="result-box">
+          <strong>Результат:</strong> Страница /generator генерирует реальные сценарии через Claude API.
+          Модель: <code>claude-sonnet-4-6</code>, до 1500 токенов, поддержка: сценарий / хук / CTA / заголовок / описание / идеи.
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div class="phase-card phase-2">
+      <div class="phase-header">
+        <div class="phase-header-left">
+          <span class="phase-emoji">🗄️</span>
+          <div>
+            <div class="phase-name">Этап 2 — База данных</div>
+            <div class="phase-sub">Supabase PostgreSQL · история контента · лиды</div>
+          </div>
+        </div>
+        <span class="phase-time">⏱ 30-40 минут</span>
+      </div>
+      <div class="phase-body">
+        <ul class="task-list">
+          <li>Зарегистрироваться на <strong>supabase.com</strong> (бесплатный план: 500MB, 50k запросов/мес)</li>
+          <li>Создать новый проект: Organization → New Project → выбрать регион <strong>EU West</strong></li>
+          <li>Скопировать 3 ключа из <strong>Project Settings → API</strong> в <code>.env.local</code></li>
+          <li>В SQL Editor выполнить миграции (таблицы ниже)</li>
+          <li>Включить Row Level Security (RLS) для production</li>
+        </ul>
+        <p style="font-size:12px;font-weight:700;color:#374151;margin:12px 0 8px;">Таблицы для создания:</p>
+        <div class="db-table-block">
+          <h4>generated_content</h4>
+          <div class="db-cols">
+            <span class="db-col key">id (uuid, pk)</span>
+            <span class="db-col">type (text)</span>
+            <span class="db-col">topic (text)</span>
+            <span class="db-col">platform (text)</span>
+            <span class="db-col">tone (text)</span>
+            <span class="db-col">content (text)</span>
+            <span class="db-col">created_at (timestamptz)</span>
+          </div>
+        </div>
+        <div class="db-table-block">
+          <h4>leads</h4>
+          <div class="db-cols">
+            <span class="db-col key">id (uuid, pk)</span>
+            <span class="db-col">name (text)</span>
+            <span class="db-col">phone (text)</span>
+            <span class="db-col">city (text)</span>
+            <span class="db-col">source (text)</span>
+            <span class="db-col">status (text)</span>
+            <span class="db-col">notes (text)</span>
+            <span class="db-col">created_at (timestamptz)</span>
+          </div>
+        </div>
+        <div class="db-table-block">
+          <h4>scheduled_posts</h4>
+          <div class="db-cols">
+            <span class="db-col key">id (uuid, pk)</span>
+            <span class="db-col fk">content_id (uuid, fk)</span>
+            <span class="db-col">platform (text)</span>
+            <span class="db-col">scheduled_at (timestamptz)</span>
+            <span class="db-col">status (text)</span>
+            <span class="db-col">published_at (timestamptz)</span>
+          </div>
+        </div>
+        <div class="result-box">
+          <strong>Результат:</strong> История сгенерированного контента сохраняется. Лиды из форм записываются в базу.
+          Данные доступны в Supabase Dashboard.
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 3 -->
+    <div class="phase-card phase-3">
+      <div class="phase-header">
+        <div class="phase-header-left">
+          <span class="phase-emoji">🌐</span>
+          <div>
+            <div class="phase-name">Этап 3 — Постоянный деплой</div>
+            <div class="phase-sub">GitHub + Vercel · постоянный URL · CI/CD</div>
+          </div>
+        </div>
+        <span class="phase-time">⏱ 30-45 минут</span>
+      </div>
+      <div class="phase-body">
+        <ul class="task-list">
+          <li>Создать репозиторий на <strong>GitHub</strong>: github.com → New Repository → <code>adonis-platform</code> (private)</li>
+          <li>В папке проекта: <code>git init</code> → <code>git add .</code> → <code>git commit -m "init"</code> → <code>git push</code></li>
+          <li>Зарегистрироваться на <strong>vercel.com</strong> (через GitHub аккаунт — телефон не нужен)</li>
+          <li>New Project → Import GitHub Repository → выбрать <code>adonis-platform</code></li>
+          <li>В настройках Vercel добавить все переменные из <code>.env.local</code> (Environment Variables)</li>
+          <li>Deploy → получить постоянный URL вида <code>adonis-platform.vercel.app</code></li>
+          <li>Настроить кастомный домен если есть (Settings → Domains)</li>
+        </ul>
+        <div class="result-box">
+          <strong>Результат:</strong> Постоянная ссылка для заказчика. При каждом <code>git push</code> — автоматический деплой за 1-2 минуты.
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 4 -->
+    <div class="phase-card phase-4">
+      <div class="phase-header">
+        <div class="phase-header-left">
+          <span class="phase-emoji">📨</span>
+          <div>
+            <div class="phase-name">Этап 4 — Telegram автопостинг</div>
+            <div class="phase-sub">Telegram Bot API · первый реальный постинг · бесплатно</div>
+          </div>
+        </div>
+        <span class="phase-time">⏱ 2-3 дня</span>
+      </div>
+      <div class="phase-body">
+        <ul class="task-list">
+          <li>Создать бота: написать <strong>@BotFather</strong> в Telegram → /newbot → получить <code>BOT_TOKEN</code></li>
+          <li>Добавить бота в канал как администратора с правом публикации</li>
+          <li>Получить ID канала: переслать сообщение из канала боту <strong>@getidsbot</strong></li>
+          <li>Добавить в <code>.env.local</code>: <code>TELEGRAM_BOT_TOKEN</code> и <code>TELEGRAM_CHANNEL_ID</code></li>
+          <li>Создать новый API роут: <code>app/api/telegram/publish/route.ts</code></li>
+          <li>В роуте использовать Telegram Bot API: <code>POST https://api.telegram.org/bot{TOKEN}/sendMessage</code></li>
+          <li>Подключить кнопку «Запостить в Telegram» на странице /autopost к новому роуту</li>
+          <li>Для видео: использовать <code>sendVideo</code> метод (поддерживает URL)</li>
+          <li>Для расписания: использовать Vercel Cron Jobs (vercel.json → <code>"crons"</code>)</li>
+        </ul>
+        <div class="result-box">
+          <strong>Результат:</strong> Реальная публикация текста, изображений и видео в Telegram канал по расписанию.
+          Telegram Bot API бесплатный, без ограничений модерации.
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 5 -->
+    <div class="phase-card phase-5">
+      <div class="phase-header">
+        <div class="phase-header-left">
+          <span class="phase-emoji">📱</span>
+          <div>
+            <div class="phase-name">Этап 5 — Instagram + TikTok</div>
+            <div class="phase-sub">Instagram Graph API · Content Publishing API · модерация</div>
+          </div>
+        </div>
+        <span class="phase-time">⏱ 1-2 недели</span>
+      </div>
+      <div class="phase-body">
+        <ul class="task-list">
+          <li><strong>Instagram:</strong> Нужен Facebook Business аккаунт + Instagram Professional аккаунт</li>
+          <li>Создать приложение на <strong>developers.facebook.com</strong> → добавить продукт Instagram Graph API</li>
+          <li>Получить долгосрочный access_token (60 дней, можно обновлять)</li>
+          <li>Endpoint для публикации: <code>POST /{ig-user-id}/media</code> → <code>POST /{ig-user-id}/media_publish</code></li>
+          <li>Ограничение: не более 25 публикаций в 24 часа на аккаунт</li>
+          <li><strong>TikTok:</strong> Зарегистрировать аккаунт разработчика на <strong>developers.tiktok.com</strong></li>
+          <li>Подать заявку на Content Posting API (рассматривают 1-5 рабочих дней)</li>
+          <li>Использовать Video Upload API для загрузки видео</li>
+        </ul>
+        <div class="result-box">
+          <strong>Результат:</strong> Публикация Reels и постов в Instagram, публикация видео в TikTok через единый интерфейс /autopost.
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 6 -->
+    <div class="phase-card phase-6">
+      <div class="phase-header">
+        <div class="phase-header-left">
+          <span class="phase-emoji">🎬</span>
+          <div>
+            <div class="phase-name">Этап 6 — Генерация видео</div>
+            <div class="phase-sub">HeyGen / RunwayML · реальная Видео-фабрика</div>
+          </div>
+        </div>
+        <span class="phase-time">⏱ 2-4 недели</span>
+      </div>
+      <div class="phase-body">
+        <ul class="task-list">
+          <li><strong>Вариант A — HeyGen:</strong> heygen.com → API Access → аватар + озвучка → $30/мес</li>
+          <li>Endpoint: <code>POST /v1/video.generate</code> с текстом скрипта → получить URL видео</li>
+          <li>Подключить к странице /video-factory: кнопка «Создать видео» → реальный запрос</li>
+          <li><strong>Вариант B — RunwayML:</strong> runwayml.com → Gen-3 Alpha API → генерация видео из промпта</li>
+          <li><strong>Вариант C (эконом) — ElevenLabs + D-ID:</strong> ElevenLabs для голоса + D-ID для аватара</li>
+          <li>Сохранять статус генерации в Supabase (polling каждые 5 сек пока не готово)</li>
+          <li>Финальное видео сохранять в Supabase Storage или Cloudflare R2</li>
+        </ul>
+        <div class="result-box">
+          <strong>Результат:</strong> Полный цикл: сгенерировал сценарий → создал видео → опубликовал в TikTok/Instagram — всё в одном интерфейсе.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- PRIORITY LIST -->
+  <div class="section">
+    <div class="section-title">⚡ Приоритеты (что делать первым)</div>
+    <div class="priority-row p1">
+      <div class="priority-num">1</div>
+      <div class="priority-text">
+        <strong>Anthropic API Key → .env.local</strong>
+        10 минут, нулевые затраты на инфраструктуру, сразу видно результат. Показывает реальную AI функцию заказчику.
+      </div>
+      <span class="status status-todo">СРОЧНО</span>
+    </div>
+    <div class="priority-row p2">
+      <div class="priority-num">2</div>
+      <div class="priority-text">
+        <strong>GitHub репозиторий + Vercel деплой</strong>
+        Постоянная ссылка вместо localtunnel. Без этого нельзя нормально показывать проект.
+      </div>
+      <span class="status status-todo">ВАЖНО</span>
+    </div>
+    <div class="priority-row p3">
+      <div class="priority-num">3</div>
+      <div class="priority-text">
+        <strong>Supabase база данных</strong>
+        История контента, лиды. Можно настроить параллельно с деплоем.
+      </div>
+      <span class="status status-wait">НУЖНО</span>
+    </div>
+    <div class="priority-row p4">
+      <div class="priority-num">4</div>
+      <div class="priority-text">
+        <strong>Telegram автопостинг</strong>
+        Самый быстрый путь к реальному постингу. Бесплатно, без модерации.
+      </div>
+      <span class="status status-wait">ПОСЛЕ</span>
+    </div>
+    <div class="priority-row p5">
+      <div class="priority-num">5</div>
+      <div class="priority-text">
+        <strong>Instagram + TikTok + Видео-генерация</strong>
+        Продвинутые функции. Требуют модерации от платформ.
+      </div>
+      <span class="status status-done">ПОЗЖЕ</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- QUICK CHECK -->
+  <div class="section">
+    <div class="section-title">✅ Чеклист готовности</div>
+    <ul class="checklist">
+      <li><div class="box"></div> Anthropic API key получен и вставлен в .env.local</li>
+      <li><div class="box"></div> /generator генерирует реальный контент</li>
+      <li><div class="box"></div> Supabase проект создан, 3 ключа вставлены</li>
+      <li><div class="box"></div> Таблицы generated_content, leads, scheduled_posts созданы в Supabase</li>
+      <li><div class="box"></div> GitHub репозиторий создан (приватный)</li>
+      <li><div class="box"></div> Код запушен на GitHub</li>
+      <li><div class="box"></div> Vercel проект создан и связан с GitHub</li>
+      <li><div class="box"></div> Все env переменные добавлены в Vercel</li>
+      <li><div class="box"></div> Получена постоянная ссылка vercel.app</li>
+      <li><div class="box"></div> Telegram бот создан (@BotFather)</li>
+      <li><div class="box"></div> Бот добавлен в канал как администратор</li>
+      <li><div class="box"></div> API роут для Telegram написан и работает</li>
+      <li><div class="box"></div> /autopost публикует реально в Telegram</li>
+    </ul>
+  </div>
+
+  <!-- USEFUL LINKS -->
+  <div class="section">
+    <div class="section-title">🔗 Полезные ссылки</div>
+    <div class="links-grid">
+      <div class="link-card">
+        <h4>🤖 Anthropic Console</h4>
+        <a href="https://console.anthropic.com">console.anthropic.com</a>
+        <p>API Keys → модели → биллинг</p>
+      </div>
+      <div class="link-card">
+        <h4>🗄️ Supabase</h4>
+        <a href="https://supabase.com">supabase.com</a>
+        <p>Бесплатный план: 500MB, 50k запросов/мес</p>
+      </div>
+      <div class="link-card">
+        <h4>🌐 Vercel</h4>
+        <a href="https://vercel.com">vercel.com</a>
+        <p>Деплой через GitHub, бесплатный план</p>
+      </div>
+      <div class="link-card">
+        <h4>📱 Facebook Developers</h4>
+        <a href="https://developers.facebook.com">developers.facebook.com</a>
+        <p>Instagram Graph API, Content Publishing</p>
+      </div>
+      <div class="link-card">
+        <h4>🎵 TikTok Developers</h4>
+        <a href="https://developers.tiktok.com">developers.tiktok.com</a>
+        <p>Content Posting API, Video Upload</p>
+      </div>
+      <div class="link-card">
+        <h4>🎬 HeyGen</h4>
+        <a href="https://heygen.com">heygen.com</a>
+        <p>AI аватары и озвучка, API доступ</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SQL MIGRATION -->
+  <div class="section">
+    <div class="section-title">💾 SQL миграция для Supabase</div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:10px;">Скопировать в Supabase → SQL Editor → New Query → Run</p>
+    <div class="file-tree" style="font-size:11px;">
+<span style="color:#475569">-- Таблица для сгенерированного контента</span>
+<span style="color:#818cf8">CREATE TABLE</span> generated_content (
+  id        uuid <span style="color:#34d399">DEFAULT gen_random_uuid()</span> PRIMARY KEY,
+  type      text NOT NULL,
+  topic     text,
+  platform  text,
+  tone      text,
+  content   text NOT NULL,
+  created_at timestamptz <span style="color:#34d399">DEFAULT now()</span>
+);
+
+<span style="color:#475569">-- Таблица лидов</span>
+<span style="color:#818cf8">CREATE TABLE</span> leads (
+  id         uuid <span style="color:#34d399">DEFAULT gen_random_uuid()</span> PRIMARY KEY,
+  name       text NOT NULL,
+  phone      text,
+  city       text,
+  source     text,
+  status     text <span style="color:#34d399">DEFAULT 'new'</span>,
+  notes      text,
+  created_at timestamptz <span style="color:#34d399">DEFAULT now()</span>
+);
+
+<span style="color:#475569">-- Таблица запланированных публикаций</span>
+<span style="color:#818cf8">CREATE TABLE</span> scheduled_posts (
+  id           uuid <span style="color:#34d399">DEFAULT gen_random_uuid()</span> PRIMARY KEY,
+  content_id   uuid REFERENCES generated_content(id),
+  platform     text NOT NULL,
+  scheduled_at timestamptz NOT NULL,
+  status       text <span style="color:#34d399">DEFAULT 'pending'</span>,
+  published_at timestamptz
+);
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>ADONIS AI Platform · Технические задачи · <strong>v1.0</strong> · Май 2026</p>
+    <p>Проект создан: Claude Code (Anthropic) · <strong>adonis_franchiza/dev_tasks/</strong></p>
+  </div>
+
+</div>
+</body>
+</html>
