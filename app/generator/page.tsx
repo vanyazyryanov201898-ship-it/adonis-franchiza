@@ -94,6 +94,24 @@ export default function GeneratorPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  // Восстанавливаем последний результат при возврате на страницу
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("adonis_last_result");
+      if (saved) {
+        const r = JSON.parse(saved);
+        if (r.streamText)    setStreamText(r.streamText);
+        if (r.streamDone)    setStreamDone(r.streamDone);
+        if (r.viralScore)    setViralScore(r.viralScore);
+        if (r.viralAnalysis) setViralAnalysis(r.viralAnalysis);
+        if (r.carouselData)  { setCarouselData(r.carouselData); setSlideImages(r.slideImages || []); }
+        if (r.selectedType)  setSelectedType(r.selectedType);
+        if (r.platform)      setPlatform(r.platform);
+        if (r.tone)          setTone(r.tone);
+      }
+    } catch {}
+  }, []);
+
   // Подхватываем тему из Trends/Analysis если передана через sessionStorage
   useEffect(() => {
     try {
@@ -155,10 +173,17 @@ export default function GeneratorPage() {
       setViralScore(data.viralScore);
       if (data.viralAnalysis) setViralAnalysis(data.viralAnalysis);
       if (data.carouselData) {
+        const imgs = pickImages(data.carouselData.slides.length + 1);
         setCarouselData(data.carouselData);
-        setSlideImages(pickImages(data.carouselData.slides.length + 1));
+        setSlideImages(imgs);
         setStreamDone(true);
         setIsGenerating(false);
+        try {
+          localStorage.setItem("adonis_last_result", JSON.stringify({
+            carouselData: data.carouselData, slideImages: imgs,
+            viralScore: data.viralScore, selectedType, platform, tone, streamDone: true,
+          }));
+        } catch {}
         return;
       }
       let i = 0;
@@ -173,6 +198,15 @@ export default function GeneratorPage() {
           setStreamDone(true);
           setIsGenerating(false);
           setGenerationCount((c) => c + 1);
+
+          // Сохраняем результат — восстановится при возврате на страницу
+          try {
+            localStorage.setItem("adonis_last_result", JSON.stringify({
+              streamText: full, streamDone: true,
+              viralScore: data.viralScore, viralAnalysis: data.viralAnalysis,
+              selectedType, platform, tone,
+            }));
+          } catch {}
 
           // Сохраняем в историю
           saveToHistory({
@@ -402,12 +436,23 @@ export default function GeneratorPage() {
                 <Flame className="w-4 h-4 text-orange-400" />
                 Результат генерации
               </h3>
-              {streamDone && viralScore && (
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-slate-500">{topic} · {platform}</span>
+              <div className="flex items-center gap-3">
+                {streamDone && viralScore && (
                   <span className="text-xs font-bold text-emerald-400">Viral Score: {viralScore}/100</span>
-                </div>
-              )}
+                )}
+                {(streamDone || carouselData) && (
+                  <button
+                    onClick={() => {
+                      setStreamText(""); setStreamDone(false); setViralScore(null);
+                      setViralAnalysis(null); setCarouselData(null); setSlideImages([]);
+                      try { localStorage.removeItem("adonis_last_result"); } catch {}
+                    }}
+                    className="text-xs text-slate-600 hover:text-red-400 transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" /> Очистить
+                  </button>
+                )}
+              </div>
             </div>
 
             <AnimatePresence mode="wait">
