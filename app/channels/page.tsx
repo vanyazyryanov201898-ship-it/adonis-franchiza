@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Link2, CheckCircle2, XCircle, Zap, TrendingUp,
+  Link2, XCircle, Zap, TrendingUp,
   Eye, Users, BarChart2, RefreshCw, Plus, Unlink,
   Activity, ArrowUpRight, AlertCircle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { useToast } from "@/lib/toast-context";
 
 const platforms = [
   {
@@ -106,6 +108,38 @@ const platforms = [
     status: "disconnected",
     description: "Статьи и видео · SEO трафик",
   },
+  {
+    id: "rutube",
+    name: "Rutube",
+    abbr: "Rt",
+    color: "#003087",
+    connected: false,
+    username: null,
+    followers: 0,
+    avgViews: 0,
+    posts: 0,
+    er: 0,
+    growth: 0,
+    lastPost: "—",
+    status: "disconnected",
+    description: "Видео · Российская платформа",
+  },
+  {
+    id: "yappy",
+    name: "Yappy",
+    abbr: "Yp",
+    color: "#ff6600",
+    connected: false,
+    username: null,
+    followers: 0,
+    avgViews: 0,
+    posts: 0,
+    er: 0,
+    growth: 0,
+    lastPost: "—",
+    status: "disconnected",
+    description: "Короткие видео · Газпром-Медиа",
+  },
 ];
 
 const totalReach = platforms
@@ -116,11 +150,55 @@ const totalPosts = platforms
   .filter((p) => p.connected)
   .reduce((acc, p) => acc + p.posts, 0);
 
+function SkeletonPlatformCard() {
+  return (
+    <div className="p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] animate-pulse">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-white/[0.06]" />
+          <div className="space-y-2">
+            <div className="h-3.5 w-20 rounded-full bg-white/[0.08]" />
+            <div className="h-2.5 w-28 rounded-full bg-white/[0.04]" />
+          </div>
+        </div>
+        <div className="h-6 w-24 rounded-full bg-white/[0.05]" />
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+            <div className="h-5 w-12 rounded bg-white/[0.07] mb-1" />
+            <div className="h-2.5 w-16 rounded-full bg-white/[0.04]" />
+          </div>
+        ))}
+      </div>
+      <div className="h-9 rounded-xl bg-white/[0.04]" />
+    </div>
+  );
+}
+
 export default function ChannelsPage() {
+  const router = useRouter();
   const [connecting, setConnecting] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const [platformList, setPlatformList] = useState(platforms);
   const [syncing, setSyncing] = useState(false);
+  const [livePostCount, setLivePostCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 700);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Math.random() > 0.6) setLivePostCount((c) => c + 1);
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const { toast } = useToast();
+  const showToast = (msg: string) => toast(msg);
 
   const handleConnect = (id: string) => {
     setConnecting(id);
@@ -182,8 +260,11 @@ export default function ChannelsPage() {
   return (
     <AppLayout title="Каналы" subtitle="Подключённые платформы и статусы интеграций">
       <div className="p-6 space-y-6">
-
         {/* Summary Row */}
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xs text-slate-500">Подписчики и охваты — демо-данные.</span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-[10px] font-semibold text-amber-400 tracking-wide">📊 ДЕМО</span>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             {
@@ -209,7 +290,7 @@ export default function ChannelsPage() {
             },
             {
               label: "AI Автопостинг",
-              value: "Активен",
+              value: livePostCount > 0 ? `+${livePostCount} сегодня` : "Активен",
               icon: Activity,
               color: "text-cyan-400",
               bg: "bg-cyan-400/10",
@@ -242,7 +323,7 @@ export default function ChannelsPage() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={handleSync}
+            onClick={() => { handleSync(); setTimeout(() => showToast("Данные синхронизированы"), 2500); }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.08] bg-white/[0.04] text-xs text-slate-300 hover:text-white hover:border-violet-500/30 transition-all"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-violet-400" : ""}`} />
@@ -252,7 +333,9 @@ export default function ChannelsPage() {
 
         {/* Platform Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {platformList.map((platform, index) => {
+          {isLoading
+            ? Array.from({ length: 6 }).map((_, i) => <SkeletonPlatformCard key={i} />)
+            : platformList.map((platform, index) => {
             const isConnecting = connecting === platform.id;
             const isDisconnecting = disconnecting === platform.id;
             const isBusy = isConnecting || isDisconnecting;
@@ -365,7 +448,9 @@ export default function ChannelsPage() {
                 {/* Action Button */}
                 {platform.connected ? (
                   <div className="flex gap-2">
-                    <button className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-white transition-all"
+                    <button
+                      onClick={() => router.push("/analytics")}
+                      className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-white transition-all hover:opacity-80"
                       style={{ backgroundColor: `${platform.color}20`, border: `1px solid ${platform.color}35` }}
                     >
                       <span className="flex items-center justify-center gap-1.5">
@@ -374,7 +459,7 @@ export default function ChannelsPage() {
                       </span>
                     </button>
                     <button
-                      onClick={() => handleDisconnect(platform.id)}
+                      onClick={() => { handleDisconnect(platform.id); showToast(`${platform.name} отключён`); }}
                       disabled={isBusy}
                       className="px-3 py-2.5 rounded-xl text-xs text-slate-500 hover:text-red-400 border border-white/[0.06] hover:border-red-500/30 transition-all disabled:opacity-50"
                     >

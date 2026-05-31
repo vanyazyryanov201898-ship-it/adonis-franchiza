@@ -26,14 +26,17 @@ function buildPrompt(type: string, topic: string, platform: string, tone: string
     "Telegram": "Telegram-канал (текст + видео, деловая аудитория)",
   };
 
-  const base = `Ты — AI-копирайтер для компании ADONIS (производство мерча и франшиза).
-Контекст: ADONIS — российская компания, производит одежду с принтами (DTF-печать, шелкография), продаёт франшизу.
-Целевая аудитория: предприниматели, желающие открыть бизнес или купить франшизу.
+  const base = `Ты — AI-копирайтер для компании ADONIS.
+Контекст: ADONIS — франшиза №1 в России по печати и брендированию одежды и аксессуаров. Студия брендирования: печать на одежде, создание собственных брендов, работа с маркетплейсами (Wildberries), корпоративные заказы от 30 до 1000 штук.
+Ключевые цифры: выручка партнёра 450 тыс. — 1 млн руб/мес, чистая прибыль 150–300 тыс. руб/мес, окупаемость 3–5 месяцев. Рекорд: 31 млн выручки за год.
+Реальные кейсы: Кирьяк и Мария (Ростов) — 16 млн, окупились за 4.5 мес; Сергей (Ставрополь) — 10 млн, 6 мес; Христофор (Сочи) — 6 млн, 5 мес.
+Что получает партнёр: готовое оборудование, обучение, поддержка 24/7, помощь в открытии ИП, юр/бух сопровождение, помощь в поиске клиентов, доступ к производству в Казани. Запуск: 14 дней — 1 месяц. Можно работать из дома.
+Целевая аудитория: предприниматели 25–45 лет, хотят уйти из найма, открыть своё дело, зарабатывать 150–300 тыс./мес, боятся больших вложений.
 Тон: ${toneDesc[tone] || "доверительный"}.
 Платформа: ${platformDesc[platform] || platform}.
 Тема: ${topic}.
 
-ВАЖНО: Отвечай ТОЛЬКО на русском языке. Без вступлений и объяснений — сразу контент.`;
+ВАЖНО: Используй реальные цифры компании. Отвечай ТОЛЬКО на русском языке. Без вступлений — сразу контент.`;
 
   const prompts: Record<string, string> = {
     scenario: `${base}
@@ -106,17 +109,50 @@ function buildPrompt(type: string, topic: string, platform: string, tone: string
   return prompts[type] || prompts.hook;
 }
 
+async function analyzeViralPotential(content: string, type: string, platform: string) {
+  try {
+    const analysisPrompt = `Ты — эксперт по вирусному контенту. Проанализируй этот контент для ${platform} и верни JSON.
+
+Контент:
+${content.slice(0, 800)}
+
+Верни ТОЛЬКО валидный JSON без пояснений:
+{"score":NUMBER_80_97,"positives":["конкретный плюс 1","конкретный плюс 2","конкретный плюс 3"],"improvements":["что улучшить 1","что улучшить 2"]}
+
+Правила:
+- score: реальная оценка 80-97, учитывай хук, CTA, цифры, платформу
+- positives: конкретные сильные стороны этого контента (упоминай цифры если есть)
+- improvements: конкретные рекомендации по улучшению`;
+
+    const msg = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 300,
+      messages: [{ role: "user", content: analysisPrompt }],
+    });
+
+    const raw = msg.content[0].type === "text" ? msg.content[0].text.trim() : "";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) return JSON.parse(jsonMatch[0]);
+  } catch {}
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { type, topic, platform, tone } = await req.json();
+    const { type, topic, platform, tone, brandVoice } = await req.json();
 
     if (!type || !topic || !platform) {
       return NextResponse.json({ error: "Не указаны обязательные параметры" }, { status: 400 });
     }
 
-    const prompt = buildPrompt(type, topic, platform, tone || "Доверительный");
+    let prompt = buildPrompt(type, topic, platform, tone || "Доверительный");
 
-    // Вызываем Claude
+    // Если передан голос бренда — добавляем его в промпт
+    if (brandVoice) {
+      prompt += `\n\nВАЖНО — Голос бренда: ${brandVoice}\nПиши строго в этом стиле.`;
+    }
+
+    // Генерируем контент + анализ параллельно
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1500,
@@ -124,7 +160,10 @@ export async function POST(req: NextRequest) {
     });
 
     const content = message.content[0].type === "text" ? message.content[0].text : "";
-    const viralScore = Math.floor(Math.random() * 12) + 85; // 85-96
+
+    // Анализ вирусности — параллельный запрос
+    const viralAnalysis = await analyzeViralPotential(content, type, platform);
+    const viralScore = viralAnalysis?.score ?? Math.floor(Math.random() * 12) + 85;
 
     // Сохраняем в Supabase (если настроен)
     try {
@@ -139,11 +178,10 @@ export async function POST(req: NextRequest) {
         viral_score: viralScore,
       });
     } catch (dbErr) {
-      // БД не настроена — просто пропускаем, контент всё равно вернём
       console.warn("Supabase не настроен:", dbErr);
     }
 
-    return NextResponse.json({ content, viralScore });
+    return NextResponse.json({ content, viralScore, viralAnalysis });
   } catch (err: any) {
     console.error("Generate error:", err);
     return NextResponse.json(

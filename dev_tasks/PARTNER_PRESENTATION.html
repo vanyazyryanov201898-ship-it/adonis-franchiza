@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Контент-завод — Инструкция по платформе</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent: #8b5cf6;
+  --accent2: #3b82f6;
+  --emerald: #10b981;
+  --amber: #f59e0b;
+  --bg: #07070f;
+  --card: rgba(255,255,255,0.03);
+  --border: rgba(255,255,255,0.07);
+  --border-v: rgba(139,92,246,0.22);
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --subtle: #475569;
+}
+
+html { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+body { max-width: 940px; margin: 0 auto; padding: 0 28px 100px; }
+
+/* ── PDF button ── */
+#pdf-btn {
+  position: fixed; top: 20px; right: 20px; z-index: 999;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; border: none; border-radius: 12px;
+  padding: 10px 22px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  box-shadow: 0 4px 20px rgba(139,92,246,0.4);
+  transition: transform .15s;
+}
+#pdf-btn:hover { transform: translateY(-1px); }
+
+/* ── Pages ── */
+.page {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  justify-content: center;
+  padding: 64px 0;
+  position: relative;
+}
+.page + .page { border-top: 1px solid var(--border); }
+
+/* ── Typography ── */
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.eyebrow::before { content: ''; display: block; width: 20px; height: 2px; background: var(--accent); border-radius: 2px; }
+h1.hero { font-size: clamp(38px, 5.5vw, 66px); font-weight: 900; line-height: 1.07; letter-spacing: -.035em; margin-bottom: 22px; }
+h2.section { font-size: clamp(26px, 3.8vw, 44px); font-weight: 800; line-height: 1.1; letter-spacing: -.028em; margin-bottom: 14px; }
+h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.sub { font-size: 16px; color: var(--muted); line-height: 1.68; }
+.lbl { font-size: 11px; color: var(--subtle); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+
+.gtext { background: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 50%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* ── Badges ── */
+.b { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+.bv { background: rgba(139,92,246,.13); border: 1px solid rgba(139,92,246,.28); color: #c4b5fd; }
+.bg { background: rgba(16,185,129,.11); border: 1px solid rgba(16,185,129,.26); color: #6ee7b7; }
+.bb { background: rgba(59,130,246,.11); border: 1px solid rgba(59,130,246,.26); color: #93c5fd; }
+.ba { background: rgba(245,158,11,.11); border: 1px solid rgba(245,158,11,.26); color: #fcd34d; }
+.br { background: rgba(239,68,68,.1);  border: 1px solid rgba(239,68,68,.24);  color: #fca5a5; }
+
+/* ── Cards ── */
+.card  { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 22px; }
+.cardv { background: linear-gradient(135deg,rgba(139,92,246,.07),rgba(59,130,246,.03)); border: 1px solid var(--border-v); border-radius: 18px; padding: 22px; }
+.cardg { background: rgba(16,185,129,.05); border: 1px solid rgba(16,185,129,.18); border-radius: 18px; padding: 22px; }
+.carda { background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.2); border-radius: 18px; padding: 22px; }
+
+/* ── Grids ── */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.g3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+
+/* ── Feature row ── */
+.feat { display: flex; align-items: flex-start; gap: 12px; padding: 13px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 13px; }
+.feat:hover { border-color: var(--border-v); }
+.fi { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+
+/* ── Steps ── */
+.steps { display: flex; flex-direction: column; gap: 0; }
+.step { display: flex; align-items: flex-start; gap: 18px; padding: 12px 0; position: relative; }
+.step::after { content: ''; position: absolute; left: 17px; top: 50px; width: 2px; height: calc(100% - 8px); background: rgba(139,92,246,.15); }
+.step:last-child::after { display: none; }
+.snum { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; z-index: 1; background: rgba(139,92,246,.14); border: 2px solid rgba(139,92,246,.32); color: #c4b5fd; }
+.sbody h4 { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.sbody p { font-size: 12px; color: var(--muted); line-height: 1.55; }
+
+/* ── Table ── */
+.tw { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.tr { display: grid; }
+.tr > div { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.tr:last-child > div { border-bottom: none; }
+.th > div { font-size: 11px; font-weight: 700; color: var(--subtle); letter-spacing: .06em; text-transform: uppercase; background: rgba(255,255,255,.02); }
+
+/* ── Notice ── */
+.note { display: flex; align-items: flex-start; gap: 12px; padding: 16px 20px; border-radius: 14px; }
+.note-v { background: rgba(139,92,246,.08); border: 1px solid rgba(139,92,246,.22); }
+.note-g { background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.2); }
+.note-a { background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.22); }
+
+/* ── Section divider ── */
+.divider { width: 100%; height: 1px; background: linear-gradient(90deg,transparent,rgba(139,92,246,.28),transparent); margin: 32px 0; }
+
+/* ── CTA ── */
+.cta { background: linear-gradient(135deg,rgba(139,92,246,.14),rgba(59,130,246,.07)); border: 1px solid rgba(139,92,246,.28); border-radius: 24px; padding: 48px; text-align: center; }
+
+/* ── Cover bg ── */
+.covbg { position: absolute; inset: 0; background: radial-gradient(ellipse at 65% 30%,rgba(139,92,246,.17) 0%,transparent 58%), radial-gradient(ellipse at 15% 75%,rgba(59,130,246,.09) 0%,transparent 50%); pointer-events: none; }
+
+/* ── Tag pill ── */
+.tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+.tag-demo { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.25); color: #fcd34d; }
+.tag-live { background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.22); color: #6ee7b7; }
+
+/* ── Number stat ── */
+.stat { text-align: center; padding: 20px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
+.stat-val { font-size: clamp(30px,4vw,42px); font-weight: 900; letter-spacing: -.03em; line-height: 1; margin-bottom: 6px; }
+.stat-lbl { font-size: 12px; color: var(--muted); }
+
+/* ══════════════ PRINT ══════════════ */
+@media print {
+  #pdf-btn { display: none !important; }
+  html { background: #fff !important; color: #0f172a !important; }
+  body { max-width: 100%; padding: 0; }
+  :root {
+    --bg:#fff; --card:#f8fafc; --border:#e2e8f0; --border-v:#c4b5fd;
+    --text:#0f172a; --muted:#475569; --subtle:#94a3b8;
+  }
+  .page { min-height:0; padding:40px 48px; page-break-after:always; break-after:page; border-top:none !important; }
+  .page:last-child { page-break-after:avoid; break-after:avoid; }
+  .covbg { display:none; }
+  .gtext { -webkit-text-fill-color:#6d28d9 !important; color:#6d28d9 !important; }
+  .bv { background:#ede9fe !important; color:#6d28d9 !important; border-color:#c4b5fd !important; }
+  .bg { background:#d1fae5 !important; color:#065f46 !important; border-color:#6ee7b7 !important; }
+  .bb { background:#dbeafe !important; color:#1e40af !important; border-color:#93c5fd !important; }
+  .ba { background:#fef3c7 !important; color:#92400e !important; border-color:#fcd34d !important; }
+  .br { background:#fee2e2 !important; color:#991b1b !important; border-color:#fca5a5 !important; }
+  .card,.cardv,.cardg,.carda { background:#f8fafc !important; border-color:#e2e8f0 !important; }
+  .feat,.stat { background:#f8fafc !important; border-color:#e2e8f0 !important; }
+  .tw { border-color:#e2e8f0 !important; }
+  .tr > div { border-color:#e2e8f0 !important; }
+  .th > div { background:#f1f5f9 !important; }
+  .note-v { background:#f5f3ff !important; border-color:#c4b5fd !important; }
+  .note-g { background:#f0fdf4 !important; border-color:#86efac !important; }
+  .note-a { background:#fffbeb !important; border-color:#fcd34d !important; }
+  .cta { background:#f5f3ff !important; border-color:#c4b5fd !important; }
+  .snum { background:#ede9fe !important; border-color:#c4b5fd !important; color:#6d28d9 !important; }
+  .step::after { background:#e9d5ff !important; }
+  .divider { background:#e2e8f0 !important; }
+  .tag-demo { background:#fef3c7 !important; border-color:#fcd34d !important; color:#92400e !important; }
+  .tag-live { background:#d1fae5 !important; border-color:#6ee7b7 !important; color:#065f46 !important; }
+  @page { margin: 0; size: A4; }
+}
+</style>
+</head>
+<body>
+
+<button id="pdf-btn" onclick="window.print()">⬇ Сохранить PDF</button>
+
+<!-- ══════════════════════════════════════════
+  1. ОБЛОЖКА
+══════════════════════════════════════════ -->
+<div class="page" style="align-items:center;text-align:center;">
+  <div class="covbg"></div>
+  <div style="position:relative;max-width:720px;">
+
+    <div style="display:inline-flex;align-items:center;gap:10px;padding:8px 18px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.25);border-radius:99px;margin-bottom:36px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:#10b981;animation:none;"></div>
+      <span style="font-size:12px;font-weight:600;color:#c4b5fd;">Внутренний документ · Версия 1.0</span>
+    </div>
+
+    <h1 class="hero">
+      Контент-завод<br/>
+      <span class="gtext">для франшиз</span>
+    </h1>
+
+    <p class="sub" style="max-width:580px;margin:0 auto 36px;">
+      AI-платформа, которую мы продаём франшизным бизнесам.<br/>
+      Этот документ — инструкция по работе с платформой для нас двоих.
+    </p>
+
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;">
+      <span class="b bv">🤖 Claude AI inside</span>
+      <span class="b bg">✓ Работает прямо сейчас</span>
+      <span class="b bb">10 разделов</span>
+      <span class="b ba">Любая франшиза</span>
+    </div>
+
+    <div class="note note-a" style="text-align:left;max-width:560px;margin:0 auto;">
+      <div style="font-size:20px;">📌</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px;">Что такое «Контент-завод»</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">Это SaaS-продукт, который мы настраиваем под конкретную франшизу и продаём как отдельный инструмент. Сейчас задемонстрирован на примере компании <strong style="color:var(--text);">ADONIS</strong> — это шаблон, не конечный продукт.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  2. КАК МЫ ПРОДАЁМ
+══════════════════════════════════════════ -->
+<div class="page">
+  <div class="eyebrow">Бизнес-модель</div>
+  <h2 class="section">Что мы продаём <span class="gtext">и кому</span></h2>
+  <p class="sub" style="margin-bottom:32px;">Мы не делаем контент сами — мы продаём инструмент, который делает контент за владельца франшизы.</p>
+
+  <div class="g3" style="margin-bottom:24px;">
+    <div class="cardv">
+      <div style="font-size:26px;margin-bottom:10px;">🎯</div>
+      <h3>Кто наш клиент</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:6px;">Владелец франшизы или управляющая компания, которая хочет помочь своим партнёрам делать контент и привлекать клиентов через соцсети.</p>
+    </div>
+    <div class="cardv">
+      <div style="font-size:26px;margin-bottom:10px;">📦</div>
+      <h3>Что мы поставляем</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:6px;">Белую AI-платформу, настроенную под их нишу: с их логотипом, цветами, темами контента и примерами. Готово к использованию.</p>
+    </div>
+    <div class="cardv">
+      <div style="font-size:26px;margin-bottom:10px;">🔄</div>
+      <h3>Как это работает</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:6px;">Клиент получает доступ → партнёры франшизы используют → мы берём ежемесячную подписку или разовый платёж за настройку.</p>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div>
+      <div class="lbl" style="margin-bottom:12px;">Кому это можно продать</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="feat"><div class="fi" style="background:rgba(254,44,85,.1);">☕</div><div><h4>Кофейни, пекарни, рестораны</h4><p>Хотят контент о кухне, рецептах, открытии точки</p></div></div>
+        <div class="feat"><div class="fi" style="background:rgba(233,30,140,.1);">💅</div><div><h4>Салоны красоты, студии</h4><p>До/после, цены, открытие студии, доход мастера</p></div></div>
+        <div class="feat"><div class="fi" style="background:rgba(139,92,246,.12);">🏋️</div><div><h4>Фитнес-клубы, спорт</h4><p>Трансформации, тренировки, открытие зала</p></div></div>
+        <div class="feat"><div class="fi" style="background:rgba(59,130,246,.1);">🚗</div><div><h4>Автосервисы, автомойки</h4><p>Закулисье, доход точки, кейсы клиентов</p></div></div>
+        <div class="feat"><div class="fi" style="background:rgba(16,185,129,.1);">🏥</div><div><h4>Медицина, клиники</h4><p>Врачи, услуги, открытие клиники, бизнес-сторона</p></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="lbl" style="margin-bottom:12px;">Текущий демо-стенд</div>
+      <div class="carda" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#8b5cf6,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:18px;">⚡</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;">ADONIS</div>
+            <div style="font-size:11px;color:var(--muted);">Производство и печать мерча · Франшиза</div>
+          </div>
+        </div>
+        <p style="font-size:13px;color:var(--muted);line-height:1.6;">Это шаблон, адаптированный под франшизу ADONIS. Темы контента, примеры, терминология — всё заточено под их нишу. <strong style="color:var(--text);">При продаже другому клиенту — меняем под него.</strong></p>
+      </div>
+      <div class="note note-g">
+        <div style="font-size:18px;">⏱</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#6ee7b7;margin-bottom:3px;">Адаптация под новую нишу</div>
+          <div style="font-size:12px;color:var(--muted);">Логотип + цвета + темы контента = 1–2 часа работы</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  3. ОБЗОР ПЛАТФОРМЫ
+══════════════════════════════════════════ -->
+<div class="page">
+  <div class="eyebrow">Платформа</div>
+  <h2 class="section">Из чего состоит <span class="gtext">Контент-завод</span></h2>
+  <p class="sub" style="margin-bottom:32px;">10 разделов. Каждый решает конкретную задачу клиента — от идеи до публикации.</p>
+
+  <div class="tw" style="margin-bottom:24px;">
+    <div class="tr th" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div>Раздел</div><div>Что делает</div><div>Статус</div><div>AI</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">📊 Дашборд</div>
+      <div style="color:var(--muted);">Сводка метрик, охватов, лидов, активности</div>
+      <div><span class="tag tag-live">Работает</span></div>
+      <div style="color:var(--muted);">—</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">✨ AI Генератор</div>
+      <div style="color:var(--muted);">Пишет сценарии, хуки, заголовки, CTA</div>
+      <div><span class="tag tag-live">Работает</span></div>
+      <div style="color:#10b981;font-weight:600;">Claude</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">🔥 Тренды</div>
+      <div style="color:var(--muted);">Актуальные темы, виральные хуки с оценкой</div>
+      <div><span class="tag tag-live">Работает</span></div>
+      <div style="color:var(--muted);">—</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">📈 Аналитика</div>
+      <div style="color:var(--muted);">Охваты, лиды, конверсия, топ видео, воронка</div>
+      <div><span class="tag tag-live">Работает</span></div>
+      <div style="color:var(--muted);">—</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">🔍 Анализ конкурентов</div>
+      <div style="color:var(--muted);">AI разбирает аккаунт конкурента, даёт план</div>
+      <div><span class="tag tag-live">Работает</span></div>
+      <div style="color:#10b981;font-weight:600;">Claude</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">📅 Автопостинг</div>
+      <div style="color:var(--muted);">Расписание публикаций по платформам</div>
+      <div><span class="tag tag-demo">Демо</span></div>
+      <div style="color:var(--muted);">—</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">🎬 Видео-фабрика</div>
+      <div style="color:var(--muted);">Рендер роликов, AUTO-WAVE, голоса, музыка</div>
+      <div><span class="tag tag-demo">Демо</span></div>
+      <div style="color:var(--muted);">—</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">📡 Каналы</div>
+      <div style="color:var(--muted);">Управление соцсетями, статистика платформ</div>
+      <div><span class="tag tag-live">Работает</span></div>
+      <div style="color:var(--muted);">—</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">🎨 Бренд</div>
+      <div style="color:var(--muted);">Логотип, цвета, шрифты, голос бренда</div>
+      <div><span class="tag tag-live">Работает</span></div>
+      <div style="color:#10b981;font-weight:600;">Claude</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">⚙ Настройки</div>
+      <div style="color:var(--muted);">Тема, акцент, профиль, интеграции, безопасность</div>
+      <div><span class="tag tag-live">Работает</span></div>
+      <div style="color:var(--muted);">—</div>
+    </div>
+  </div>
+
+  <div class="note note-v">
+    <div style="font-size:20px;">🌐</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:4px;">Поддерживаемые платформы</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+        <span style="font-size:12px;padding:3px 10px;border-radius:6px;background:rgba(254,44,85,.1);border:1px solid rgba(254,44,85,.25);color:#fe2c55;font-weight:600;">TikTok</span>
+        <span style="font-size:12px;padding:3px 10px;border-radius:6px;background:rgba(233,30,140,.1);border:1px solid rgba(233,30,140,.25);color:#e91e8c;font-weight:600;">Instagram</span>
+        <span style="font-size:12px;padding:3px 10px;border-radius:6px;background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.25);color:#ff6666;font-weight:600;">YouTube</span>
+        <span style="font-size:12px;padding:3px 10px;border-radius:6px;background:rgba(0,119,255,.1);border:1px solid rgba(0,119,255,.25);color:#4d9eff;font-weight:600;">VK</span>
+        <span style="font-size:12px;padding:3px 10px;border-radius:6px;background:rgba(38,165,228,.1);border:1px solid rgba(38,165,228,.25);color:#26a5e4;font-weight:600;">Telegram</span>
+        <span style="font-size:12px;padding:3px 10px;border-radius:6px;background:rgba(0,48,135,.2);border:1px solid rgba(0,48,135,.4);color:#5b8fd4;font-weight:600;">Rutube</span>
+        <span style="font-size:12px;padding:3px 10px;border-radius:6px;background:rgba(255,102,0,.1);border:1px solid rgba(255,102,0,.25);color:#ff6600;font-weight:600;">Yappy</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  4. ДАШБОРД
+══════════════════════════════════════════ -->
+<div class="page">
+  <div class="eyebrow">Раздел 1</div>
+  <h2 class="section">Дашборд — <span class="gtext">главный экран</span></h2>
+  <p class="sub" style="margin-bottom:28px;">Первое что видит клиент после входа. Все ключевые показатели бизнеса на одном экране.</p>
+
+  <div class="g4" style="margin-bottom:22px;">
+    <div class="stat"><div class="stat-val gtext">1 247</div><div class="stat-lbl">Видео сгенерировано</div></div>
+    <div class="stat"><div class="stat-val" style="color:#f59e0b;">87.4</div><div class="stat-lbl">Viral Score / 100</div></div>
+    <div class="stat"><div class="stat-val" style="color:#10b981;">3 892</div><div class="stat-lbl">Потенц. лидов</div></div>
+    <div class="stat"><div class="stat-val" style="color:#3b82f6;">2.84M</div><div class="stat-lbl">Охваты</div></div>
+  </div>
+
+  <div class="g2">
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="feat"><div class="fi" style="background:rgba(139,92,246,.12);">📊</div><div><h4>6 метрик в реальном времени</h4><p>Видео, Viral Score, лиды, охваты, конверсия, AI-эффективность</p></div></div>
+      <div class="feat"><div class="fi" style="background:rgba(59,130,246,.1);">📈</div><div><h4>График доходов по месяцам</h4><p>Динамика выручки — клиент видит рост своего бизнеса</p></div></div>
+      <div class="feat"><div class="fi" style="background:rgba(254,44,85,.1);">🍩</div><div><h4>Охваты по платформам</h4><p>Круговой график: TikTok, Instagram, YouTube, Rutube, Yappy и другие</p></div></div>
+      <div class="feat"><div class="fi" style="background:rgba(16,185,129,.1);">🔔</div><div><h4>Лента AI-активности</h4><p>Новый лид, опубликован ролик, сгенерирован контент — в реальном времени</p></div></div>
+      <div class="feat"><div class="fi" style="background:rgba(245,158,11,.1);">⚡</div><div><h4>Быстрые кнопки</h4><p>«Создать контент» → Генератор · «Подробнее» → Аналитика</p></div></div>
+    </div>
+
+    <div>
+      <div class="lbl" style="margin-bottom:10px;">Охваты по платформам — пример</div>
+      <div class="card" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#fe2c55;flex-shrink:0;"></div><div style="font-size:12px;flex:1;">TikTok</div><div style="flex:2;height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;"><div style="width:71%;height:100%;background:#fe2c55;border-radius:2px;"></div></div><div style="font-size:11px;color:var(--muted);width:36px;text-align:right;">1.24M</div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#e91e8c;flex-shrink:0;"></div><div style="font-size:12px;flex:1;">Instagram</div><div style="flex:2;height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;"><div style="width:51%;height:100%;background:#e91e8c;border-radius:2px;"></div></div><div style="font-size:11px;color:var(--muted);width:36px;text-align:right;">890K</div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#ff4444;flex-shrink:0;"></div><div style="font-size:12px;flex:1;">YouTube</div><div style="flex:2;height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;"><div style="width:26%;height:100%;background:#ff4444;border-radius:2px;"></div></div><div style="font-size:11px;color:var(--muted);width:36px;text-align:right;">456K</div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#003087;flex-shrink:0;"></div><div style="font-size:12px;flex:1;">Rutube</div><div style="flex:2;height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;"><div style="width:10%;height:100%;background:#003087;border-radius:2px;"></div></div><div style="font-size:11px;color:var(--muted);width:36px;text-align:right;">42K</div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#ff6600;flex-shrink:0;"></div><div style="font-size:12px;flex:1;">Yappy</div><div style="flex:2;height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;"><div style="width:5%;height:100%;background:#ff6600;border-radius:2px;"></div></div><div style="font-size:11px;color:var(--muted);width:36px;text-align:right;">18K</div></div>
+      </div>
+      <div class="note note-v">
+        <div style="font-size:16px;">💡</div>
+        <div style="font-size:12px;color:var(--muted);">Все цифры на дашборде подтягиваются из базы данных Supabase. Пока демо-данные — при подключении реальных аккаунтов будут реальные числа.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  5. AI ГЕНЕРАТОР
+══════════════════════════════════════════ -->
+<div class="page">
+  <div class="eyebrow">Раздел 2 · Главная функция</div>
+  <h2 class="section">AI Генератор — <span class="gtext">контент за 10 секунд</span></h2>
+  <p class="sub" style="margin-bottom:28px;">Настоящий Claude AI. Можно показать на демо прямо в браузере — клиент видит как текст появляется в реальном времени.</p>
+
+  <div class="g2" style="margin-bottom:20px;">
+    <div>
+      <div class="lbl" style="margin-bottom:14px;">Как работает — 5 шагов</div>
+      <div class="steps">
+        <div class="step">
+          <div class="snum">1</div>
+          <div class="sbody"><h4>Тип контента</h4><p>Сценарий · Хук · CTA · Заголовок · Описание · 5 идей для роликов</p></div>
+        </div>
+        <div class="step">
+          <div class="snum">2</div>
+          <div class="sbody"><h4>Тема</h4><p>Из готового списка под нишу клиента или своя. Тема передаётся в промпт Claude.</p></div>
+        </div>
+        <div class="step">
+          <div class="snum">3</div>
+          <div class="sbody"><h4>Платформа</h4><p>TikTok, Instagram, YouTube, VK, Telegram, Rutube, Yappy. AI адаптирует формат.</p></div>
+        </div>
+        <div class="step">
+          <div class="snum">4</div>
+          <div class="sbody"><h4>Тон</h4><p>Доверительный · Экспертный · Эмоциональный · Провокационный · Лёгкий</p></div>
+        </div>
+        <div class="step">
+          <div class="snum">5</div>
+          <div class="sbody"><h4>Генерировать → Скопировать</h4><p>Текст стримится в реальном времени. Кнопка «Копировать» — одним кликом.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cardv" style="margin-bottom:14px;">
+        <div class="lbl" style="margin-bottom:12px;">Типы контента</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span>🎬 Сценарий</span><span style="color:var(--muted);font-size:12px;">Полный ролик с хронометражом</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span>⚡ Хук</span><span style="color:var(--muted);font-size:12px;">Первые 3 секунды видео</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span>📣 CTA</span><span style="color:var(--muted);font-size:12px;">Призыв в конце видео</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span>#️⃣ Заголовок</span><span style="color:var(--muted);font-size:12px;">Виральный заголовок поста</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span>📄 Описание</span><span style="color:var(--muted);font-size:12px;">Текст под видео + хэштеги</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:8px 0;">
+            <span>💡 Идеи</span><span style="color:var(--muted);font-size:12px;">5 идей для роликов на неделю</span>
+          </div>
+        </div>
+      </div>
+      <div class="note note-g">
+        <div style="font-size:18px;">🔒</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#6ee7b7;margin-bottom:3px;">История сохраняется</div>
+          <div style="font-size:12px;color:var(--muted);">Все сгенерированные тексты хранятся в Supabase. Клиент может вернуться к любому.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note note-a">
+    <div style="font-size:20px;">🔑</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px;">Что важно знать про AI</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">Используется настоящий <strong style="color:var(--text);">Claude Sonnet 4.6</strong> через Anthropic API. Ключ уже прописан в системе. Генерация стоит копейки — около $0.01–0.03 за запрос. При продаже клиенту — он платит за подписку, расходы на API покрываем мы или включаем в стоимость.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  6. ТРЕНДЫ + АНАЛИТИКА
+══════════════════════════════════════════ -->
+<div class="page">
+  <div class="eyebrow">Разделы 3 и 4</div>
+  <h2 class="section">Тренды и <span class="gtext">Аналитика</span></h2>
+
+  <div class="g2" style="margin-bottom:20px;">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <div style="font-size:22px;">🔥</div>
+        <div><div style="font-size:15px;font-weight:700;">Тренды</div><div style="font-size:12px;color:var(--muted);">Что сейчас набирает миллионы</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="feat"><div style="font-size:16px;">📂</div><div><h4>Категории по нише клиента</h4><p>Фильтры настраиваются под каждую франшизу</p></div></div>
+        <div class="feat"><div style="font-size:16px;">📊</div><div><h4>Карточки трендов</h4><p>Просмотры, вирусность 0–100, потенциал лидов, рост за неделю</p></div></div>
+        <div class="feat"><div style="font-size:16px;">⚡</div><div><h4>Виральные хуки</h4><p>Готовые первые фразы. Клик → копируется в буфер. Оценка у каждого.</p></div></div>
+        <div class="feat"><div style="font-size:16px;">🚀</div><div><h4>«Создать сценарий» → Генератор</h4><p>Тема тренда передаётся в AI автоматически — не надо ничего печатать</p></div></div>
+        <div class="feat"><div style="font-size:16px;">📅</div><div><h4>График активности недели</h4><p>Видно в какие дни контент набирает больше просмотров</p></div></div>
+      </div>
+    </div>
+
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <div style="font-size:22px;">📈</div>
+        <div><div style="font-size:15px;font-weight:700;">Аналитика</div><div style="font-size:12px;color:var(--muted);">Результаты контент-маркетинга</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+        <div class="feat"><div style="font-size:16px;">📅</div><div><h4>Период: 7д / 30д / 90д / Год</h4><p>Все цифры пересчитываются при переключении</p></div></div>
+        <div class="feat"><div style="font-size:16px;">🏆</div><div><h4>Топ видео с показателями</h4><p>Просмотры, лиды, конверсия (%), Viral Score по каждому ролику</p></div></div>
+        <div class="feat"><div style="font-size:16px;">🔽</div><div><h4>Воронка продаж</h4><p>Охват → Просмотры → Клики → Лиды → Сделки. Видно где теряются.</p></div></div>
+        <div class="feat"><div style="font-size:16px;">📥</div><div><h4>Экспорт CSV</h4><p>Скачать всю статистику в Excel/Google Sheets</p></div></div>
+      </div>
+      <div class="note note-v">
+        <div style="font-size:16px;">💡</div>
+        <div style="font-size:12px;color:var(--muted);">Аналитика сейчас на демо-данных. При подключении реальных платформ (Instagram Insights, TikTok API) — будут реальные цифры. Это следующий этап после деплоя.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  7. АНАЛИЗ КОНКУРЕНТОВ
+══════════════════════════════════════════ -->
+<div class="page">
+  <div class="eyebrow">Раздел 5</div>
+  <h2 class="section">Анализ конкурентов — <span class="gtext">AI следит за рынком</span></h2>
+  <p class="sub" style="margin-bottom:28px;">Клиент вводит username конкурента — Claude анализирует аккаунт и выдаёт конкретные рекомендации. Это одна из самых эффектных фич на демо.</p>
+
+  <div class="g2" style="margin-bottom:20px;">
+    <div class="steps">
+      <div class="step">
+        <div class="snum">1</div>
+        <div class="sbody"><h4>Выбрать платформу</h4><p>TikTok, Instagram, Telegram — работают. YouTube, VK, Rutube, Yappy — следующий этап.</p></div>
+      </div>
+      <div class="step">
+        <div class="snum">2</div>
+        <div class="sbody"><h4>Ввести @username конкурента</h4><p>Любой публичный аккаунт в выбранной соцсети</p></div>
+      </div>
+      <div class="step">
+        <div class="snum">3</div>
+        <div class="sbody"><h4>Нажать «Анализировать»</h4><p>Claude изучает контент, частоту постов, вовлечённость аудитории</p></div>
+      </div>
+      <div class="step">
+        <div class="snum">4</div>
+        <div class="sbody"><h4>Читать результаты</h4><p>Сильные стороны, слабые места, что клиент может делать лучше</p></div>
+      </div>
+      <div class="step">
+        <div class="snum">5</div>
+        <div class="sbody"><h4>Получить контент-план</h4><p>AI составляет список тем роликов на основе анализа. Клик на тему → Генератор.</p></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cardv" style="margin-bottom:14px;">
+        <div class="lbl" style="margin-bottom:12px;">Что выдаёт отчёт</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;gap:10px;"><span style="color:#10b981;font-weight:700;font-size:15px;flex-shrink:0;">✓</span><div><div style="font-size:13px;font-weight:600;">Сильные стороны</div><div style="font-size:12px;color:var(--muted);">Что конкурент делает хорошо</div></div></div>
+          <div style="display:flex;gap:10px;"><span style="color:#ef4444;font-weight:700;font-size:15px;flex-shrink:0;">✗</span><div><div style="font-size:13px;font-weight:600;">Слабые места</div><div style="font-size:12px;color:var(--muted);">Где клиент может обойти</div></div></div>
+          <div style="display:flex;gap:10px;"><span style="color:#8b5cf6;font-weight:700;font-size:15px;flex-shrink:0;">→</span><div><div style="font-size:13px;font-weight:600;">Конкретные рекомендации</div><div style="font-size:12px;color:var(--muted);">Что делать иначе прямо сейчас</div></div></div>
+          <div style="display:flex;gap:10px;"><span style="color:#f59e0b;font-weight:700;font-size:15px;flex-shrink:0;">📋</span><div><div style="font-size:13px;font-weight:600;">Контент-план</div><div style="font-size:12px;color:var(--muted);">Темы для роликов на основе анализа</div></div></div>
+        </div>
+      </div>
+
+      <div class="note note-a">
+        <div style="font-size:18px;">⭐</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px;">Как использовать на демо с клиентом</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">Заранее спроси у потенциального клиента имя их главного конкурента. На демо введи его — AI выдаст персональный разбор. Это всегда производит сильное впечатление.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  8. АВТОПОСТИНГ + ВИДЕО
+══════════════════════════════════════════ -->
+<div class="page">
+  <div class="eyebrow">Разделы 6 и 7 · Демо-режим</div>
+  <h2 class="section">Автопостинг и <span class="gtext">Видео-фабрика</span></h2>
+
+  <div class="note note-a" style="margin-bottom:24px;">
+    <div style="font-size:20px;">⚙</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#fcd34d;margin-bottom:4px;">Статус: ДЕМО-режим</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">Интерфейс полностью готов и выглядит как рабочий. Реальная публикация и рендер подключаются <strong style="color:var(--text);">под конкретного клиента</strong> отдельно (Telegram Bot API, Instagram Graph API, Creatomate). Это часть кастомизации при продаже.</div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px;">📅 Автопостинг</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="feat"><div style="font-size:16px;">📱</div><div><h4>Карточки платформ</h4><p>TikTok, Instagram, YouTube, VK, Telegram, Rutube, Yappy — подписчики, посты, охваты</p></div></div>
+        <div class="feat"><div style="font-size:16px;">📅</div><div><h4>Расписание публикаций</h4><p>Добавить пост с датой/временем. Статусы: запланировано / публикуется / опубликовано</p></div></div>
+        <div class="feat"><div style="font-size:16px;">🕐</div><div><h4>Лучшее время публикации</h4><p>AI рекомендует слоты: 09:00 / 12:00 / 17:00 / 20:00 с оценкой эффективности</p></div></div>
+        <div class="feat"><div style="font-size:16px;">🤖</div><div><h4>AI Автопилот (тоггл)</h4><p>Включаешь — AI сам генерирует, выбирает время и публикует</p></div></div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px;">🎬 Видео-фабрика</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="feat"><div style="font-size:16px;">🌊</div><div><h4>AUTO-WAVE — пакетная генерация</h4><p>Период + тип + кол-во + платформы → «Запустить волну» → очередь роликов</p></div></div>
+        <div class="feat"><div style="font-size:16px;">🎙</div><div><h4>Голос и музыка</h4><p>4 голоса диктора · 4 стиля музыки · 4 стиля субтитров (минимализм / вирусный / премиум)</p></div></div>
+        <div class="feat"><div style="font-size:16px;">⏳</div><div><h4>Очередь с прогрессом</h4><p>Видно что рендерится, прогресс в %, Viral Score каждого ролика</p></div></div>
+        <div class="feat"><div style="font-size:16px;">📲</div><div><h4>Мульти-экспорт</h4><p>Один ролик сразу на TikTok, Instagram, YouTube, Rutube, Yappy</p></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  9. КАНАЛЫ + БРЕНД + НАСТРОЙКИ
+══════════════════════════════════════════ -->
+<div class="page">
+  <div class="eyebrow">Разделы 8, 9, 10</div>
+  <h2 class="section">Каналы, Бренд <span class="gtext">и Настройки</span></h2>
+
+  <div class="g3" style="margin-bottom:22px;">
+    <div class="cardv">
+      <div style="font-size:22px;margin-bottom:10px;">📡</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Каналы</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;">Все соцсети клиента в одном месте с актуальной статистикой</p>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+        <div>📊 Подписчики и охваты по каждой</div>
+        <div>💹 Engagement Rate</div>
+        <div>📈 Рост за месяц (%)</div>
+        <div>🔗 Подключить / Отключить аккаунт</div>
+        <div>🔄 Синхронизация данных</div>
+        <div>➡️ Переход в детальную аналитику</div>
+      </div>
+    </div>
+
+    <div class="cardv">
+      <div style="font-size:22px;margin-bottom:10px;">🎨</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Бренд</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;">Хранит фирменный стиль. AI учитывает его при генерации текстов.</p>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+        <div>🖼 Загрузка логотипа (светлый / тёмный)</div>
+        <div>🎨 Фирменные цвета с HEX-кодами</div>
+        <div>🔤 Шрифты бренда</div>
+        <div>💬 Голос бренда — тон текстов</div>
+        <div>✨ Улучшение промпта через Claude</div>
+      </div>
+    </div>
+
+    <div class="cardv">
+      <div style="font-size:22px;margin-bottom:10px;">⚙️</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Настройки</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;">Персонализация платформы под каждого клиента</p>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+        <div>👤 Профиль и аватар</div>
+        <div>🤖 AI-режимы автоматизации</div>
+        <div>🔔 Настройки уведомлений</div>
+        <div>🌙 Тема: тёмная / светлая / системная</div>
+        <div>🎨 6 акцентных цветов интерфейса</div>
+        <div>🔐 Безопасность и сессии</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note note-v" style="margin-bottom:14px;">
+    <div style="font-size:20px;">⌨</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:4px;">Быстрый поиск — Ctrl+K</div>
+      <div style="font-size:13px;color:var(--muted);">В любой момент нажми Ctrl+K — открывается поиск по всем разделам. Удобно показывать на демо: быстро переходить между разделами без мышки.</div>
+    </div>
+  </div>
+
+  <div class="note note-g">
+    <div style="font-size:20px;">🌙</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#6ee7b7;margin-bottom:4px;">Тема и акцент сохраняются</div>
+      <div style="font-size:13px;color:var(--muted);">Настройки темы и акцентного цвета сохраняются в localStorage. Нет «мигания» при перезагрузке страницы.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  10. КАК АДАПТИРОВАТЬ ПОД НИШУ
+══════════════════════════════════════════ -->
+<div class="page">
+  <div class="eyebrow">Для нас · Технически</div>
+  <h2 class="section">Как адаптировать <span class="gtext">под нового клиента</span></h2>
+  <p class="sub" style="margin-bottom:28px;">Сейчас платформа настроена на ADONIS. Чтобы продать другой франшизе — вот что меняем.</p>
+
+  <div class="tw" style="margin-bottom:22px;">
+    <div class="tr th" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div>Что меняем</div><div>Где</div><div>Сложность</div><div>Время</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">Логотип и название</div>
+      <div style="color:var(--muted);">Раздел Бренд + layout.tsx</div>
+      <div><span class="b bg" style="font-size:11px;">Легко</span></div>
+      <div style="color:#10b981;font-weight:600;">5 мин</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">Цветовая схема</div>
+      <div style="color:var(--muted);">Настройки → Внешний вид</div>
+      <div><span class="b bg" style="font-size:11px;">Легко</span></div>
+      <div style="color:#10b981;font-weight:600;">1 мин</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">Темы контента</div>
+      <div style="color:var(--muted);">generator/page.tsx — массив topics</div>
+      <div><span class="b bg" style="font-size:11px;">Легко</span></div>
+      <div style="color:#10b981;font-weight:600;">15 мин</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">Категории трендов</div>
+      <div style="color:var(--muted);">trends/page.tsx — массив categories</div>
+      <div><span class="b bb" style="font-size:11px;">Средне</span></div>
+      <div style="color:#10b981;font-weight:600;">10 мин</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">Демо-данные</div>
+      <div style="color:var(--muted);">lib/mock-data.ts — цифры и тексты</div>
+      <div><span class="b bb" style="font-size:11px;">Средне</span></div>
+      <div style="color:#f59e0b;font-weight:600;">30 мин</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">Хуки и тренды</div>
+      <div style="color:var(--muted);">trends/page.tsx — массивы viralHooks</div>
+      <div><span class="b bb" style="font-size:11px;">Средне</span></div>
+      <div style="color:#f59e0b;font-weight:600;">20 мин</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">Подключение Supabase</div>
+      <div style="color:var(--muted);">Новый проект + .env.local</div>
+      <div><span class="b bb" style="font-size:11px;">Средне</span></div>
+      <div style="color:#f59e0b;font-weight:600;">15 мин</div>
+    </div>
+    <div class="tr" style="grid-template-columns:2fr 3fr 1fr 1fr;">
+      <div style="font-weight:600;">Деплой на Vercel</div>
+      <div style="color:var(--muted);">GitHub → Vercel → переменные</div>
+      <div><span class="b bb" style="font-size:11px;">Средне</span></div>
+      <div style="color:#f59e0b;font-weight:600;">20 мин</div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="cardg">
+      <div style="font-size:13px;font-weight:700;color:#6ee7b7;margin-bottom:10px;">⏱ Итого под нового клиента</div>
+      <div style="font-size:28px;font-weight:900;color:#10b981;margin-bottom:4px;">~1.5–2 часа</div>
+      <div style="font-size:13px;color:var(--muted);">Полностью настроенная платформа под их нишу, с их брендом, готовая к демо или передаче клиенту</div>
+    </div>
+    <div class="note note-v" style="align-items:flex-start;flex-direction:column;gap:10px;">
+      <div style="font-size:13px;font-weight:700;color:#c4b5fd;">Что остаётся общим для всех клиентов</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);">
+        <div>✓ Весь код платформы</div>
+        <div>✓ AI Генератор (меняется только список тем)</div>
+        <div>✓ Аналитика, Тренды, Анализ конкурентов</div>
+        <div>✓ Автопостинг и Видео-фабрика (интерфейс)</div>
+        <div>✓ Все 7 соцплатформ включая Rutube и Yappy</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  11. ТЕКУЩЕЕ СОСТОЯНИЕ + СЛЕДУЮЩИЕ ШАГИ
+══════════════════════════════════════════ -->
+<div class="page">
+  <div class="eyebrow">Для нас · Статус</div>
+  <h2 class="section">Текущее состояние <span class="gtext">и что дальше</span></h2>
+  <p class="sub" style="margin-bottom:28px;">Что уже работает, что в демо, и что нужно доделать перед первой продажей.</p>
+
+  <div class="g2" style="margin-bottom:22px;">
+    <div>
+      <div class="lbl" style="margin-bottom:12px;color:#10b981;">✓ Готово и работает</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="feat"><div style="color:#10b981;font-size:18px;">✓</div><div><h4>AI Генератор</h4><p>Настоящий Claude API, стриминг, история в Supabase</p></div></div>
+        <div class="feat"><div style="color:#10b981;font-size:18px;">✓</div><div><h4>Анализ конкурентов</h4><p>Claude анализирует реальные аккаунты</p></div></div>
+        <div class="feat"><div style="color:#10b981;font-size:18px;">✓</div><div><h4>Суpabase подключена</h4><p>Таблицы созданы, данные сохраняются</p></div></div>
+        <div class="feat"><div style="color:#10b981;font-size:18px;">✓</div><div><h4>Все 10 разделов</h4><p>Навигация, тема, поиск Ctrl+K, уведомления</p></div></div>
+        <div class="feat"><div style="color:#10b981;font-size:18px;">✓</div><div><h4>7 платформ</h4><p>Включая Rutube и Yappy</p></div></div>
+        <div class="feat"><div style="color:#10b981;font-size:18px;">✓</div><div><h4>Связи между разделами</h4><p>Тренды → Генератор, Анализ → Генератор, Каналы → Аналитика</p></div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lbl" style="margin-bottom:12px;color:#f59e0b;">→ Следующие шаги</div>
+      <div class="steps">
+        <div class="step">
+          <div class="snum" style="background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.32);color:#93c5fd;">1</div>
+          <div class="sbody"><h4>Деплой на Vercel</h4><p>GitHub репо → Vercel → постоянный URL. 20 мин. Нужен для показа клиентам.</p></div>
+        </div>
+        <div class="step">
+          <div class="snum" style="background:rgba(59,130,246,.14);border-color:rgba(59,130,246,.32);color:#93c5fd;">2</div>
+          <div class="sbody"><h4>Первый клиент</h4><p>Адаптация под их нишу (1–2 ч) → демо → сделка → настройка реального постинга</p></div>
+        </div>
+        <div class="step">
+          <div class="snum" style="background:rgba(100,116,139,.1);border-color:rgba(100,116,139,.22);color:#64748b;">3</div>
+          <div class="sbody"><h4>Реальный Telegram-постинг</h4><p>Telegram Bot API (бесплатно). 2–3 дня разработки. Первая реальная автоматизация.</p></div>
+        </div>
+        <div class="step">
+          <div class="snum" style="background:rgba(100,116,139,.1);border-color:rgba(100,116,139,.22);color:#64748b;">4</div>
+          <div class="sbody"><h4>Instagram + TikTok API</h4><p>Facebook Business аккаунт, TikTok for Developers. 1–2 недели.</p></div>
+        </div>
+        <div class="step">
+          <div class="snum" style="background:rgba(100,116,139,.1);border-color:rgba(100,116,139,.22);color:#64748b;">5</div>
+          <div class="sbody"><h4>Реальная видео-генерация</h4><p>Creatomate $29/мес или HeyGen $29/мес. Подключается под конкретный запрос.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  12. ФИНАЛ
+══════════════════════════════════════════ -->
+<div class="page" style="align-items:center;justify-content:center;">
+  <div class="cta" style="max-width:700px;width:100%;">
+    <div style="font-size:48px;margin-bottom:20px;">🏭</div>
+    <h2 class="section" style="text-align:center;margin-bottom:12px;">
+      Контент-завод<br/><span class="gtext">готов к первой продаже</span>
+    </h2>
+    <p class="sub" style="text-align:center;max-width:500px;margin:0 auto 36px;">
+      Платформа работает. Демо поднять за 1 минуту.<br/>
+      Адаптация под нишу — 1–2 часа. Следующий шаг — деплой и первый клиент.
+    </p>
+
+    <div class="g4" style="margin-bottom:36px;max-width:580px;margin-left:auto;margin-right:auto;">
+      <div class="stat"><div class="stat-val gtext">10</div><div class="stat-lbl">разделов</div></div>
+      <div class="stat"><div class="stat-val" style="color:#10b981;">7</div><div class="stat-lbl">платформ</div></div>
+      <div class="stat"><div class="stat-val" style="color:#3b82f6;">2ч</div><div class="stat-lbl">под нишу</div></div>
+      <div class="stat"><div class="stat-val" style="color:#f59e0b;">∞</div><div class="stat-lbl">клиентов</div></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div style="display:flex;justify-content:center;gap:40px;flex-wrap:wrap;margin-top:28px;">
+      <div style="text-align:center;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px;">Демо прямо сейчас</div>
+        <div style="font-size:12px;color:var(--muted);">localhost:3000</div>
+      </div>
+      <div style="width:1px;background:var(--border);"></div>
+      <div style="text-align:center;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px;">Ближайший шаг</div>
+        <div style="font-size:12px;color:var(--muted);">Деплой на Vercel</div>
+      </div>
+      <div style="width:1px;background:var(--border);"></div>
+      <div style="text-align:center;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px;">Пример настройки</div>
+        <div style="font-size:12px;color:var(--muted);">ADONIS (текущий демо)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

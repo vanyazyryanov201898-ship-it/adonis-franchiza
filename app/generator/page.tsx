@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Zap, Copy, RefreshCw, ChevronDown,
   Check, Flame, BookOpen, Video, MessageSquare, Hash, FileText,
-  History, Trash2, AlertCircle,
+  History, Trash2, AlertCircle, Download,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 
@@ -20,21 +20,24 @@ const contentTypes = [
 
 const topics = [
   "Уход из найма",
-  "Запуск бизнеса",
-  "Франшиза ADONIS",
-  "Открытие ИП",
-  "Налоги и финансы",
-  "Доход 300К+",
-  "Бизнес с нуля",
-  "Печать на одежде",
-  "Производство мерча",
-  "Масштабирование",
-  "Финансовая свобода",
-  "Предпринимательство",
+  "Как окупиться за 3-5 месяцев",
+  "Франшиза ADONIS — честный разбор",
+  "Студия брендирования с нуля",
+  "Печать на одежде как бизнес",
+  "Продажи на Wildberries",
+  "Доход 150–300К в месяц",
+  "Бизнес без офиса и сотрудников",
+  "Открытие ИП за 1 день",
+  "Корпоративные заказы на мерч",
+  "Свой бренд одежды с нуля",
+  "Масштабирование студии",
+  "Реальные цифры партнёра",
+  "Производство от 30 до 1000 штук",
+  "Финансовая свобода через франшизу",
 ];
 
 const tones = ["Доверительный", "Экспертный", "Эмоциональный", "Провокационный", "Лёгкий"];
-const platforms = ["TikTok", "Instagram", "YouTube", "VK", "Telegram"];
+const platforms = ["TikTok", "Instagram", "YouTube", "VK", "Telegram", "Rutube", "Yappy"];
 
 // ─── Анимированный курсор при стриминге ────────────────────
 function StreamText({ text, done }: { text: string; done: boolean }) {
@@ -70,6 +73,7 @@ export default function GeneratorPage() {
   const [streamText, setStreamText] = useState("");
   const [streamDone, setStreamDone] = useState(false);
   const [viralScore, setViralScore] = useState<number | null>(null);
+  const [viralAnalysis, setViralAnalysis] = useState<{positives: string[]; improvements: string[]} | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -77,6 +81,17 @@ export default function GeneratorPage() {
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+
+  // Подхватываем тему из Trends/Analysis если передана через sessionStorage
+  useEffect(() => {
+    try {
+      const pending = sessionStorage.getItem("generator_topic");
+      if (pending) {
+        setCustomTopic(pending);
+        sessionStorage.removeItem("generator_topic");
+      }
+    } catch {}
+  }, []);
 
   // Загружаем историю из localStorage
   useEffect(() => {
@@ -102,6 +117,7 @@ export default function GeneratorPage() {
     setStreamText("");
     setStreamDone(false);
     setViralScore(null);
+    setViralAnalysis(null);
     setError(null);
 
     const topic = customTopic.trim() || selectedTopic;
@@ -123,6 +139,7 @@ export default function GeneratorPage() {
       // Имитируем стриминг для красивого эффекта
       const full: string = data.content;
       setViralScore(data.viralScore);
+      if (data.viralAnalysis) setViralAnalysis(data.viralAnalysis);
       let i = 0;
       const speed = 6; // мс на символ
 
@@ -159,6 +176,15 @@ export default function GeneratorPage() {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDownload = (text: string) => {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `adonis_${selectedType}_${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   const topic = customTopic.trim() || selectedTopic;
@@ -446,6 +472,11 @@ export default function GeneratorPage() {
                 >
                   {/* Кнопки действий */}
                   <div className="absolute top-4 right-4 flex items-center gap-2">
+                    {streamDone && (
+                      <span className="text-[10px] text-slate-600 tabular-nums">
+                        {streamText.length} симв.
+                      </span>
+                    )}
                     <button
                       onClick={() => handleCopy(streamText, "main")}
                       disabled={!streamDone}
@@ -457,6 +488,14 @@ export default function GeneratorPage() {
                         <><Copy className="w-3.5 h-3.5" /> Копировать</>
                       )}
                     </button>
+                    <button
+                      onClick={() => handleDownload(streamText)}
+                      disabled={!streamDone}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.08] text-xs text-slate-400 hover:text-white transition-colors disabled:opacity-40"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      .txt
+                    </button>
                   </div>
 
                   <StreamText text={streamText} done={streamDone} />
@@ -467,23 +506,22 @@ export default function GeneratorPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 }}
-                      className="mt-5 pt-4 border-t border-white/[0.05] flex items-center justify-between"
+                      className="mt-5 pt-4 border-t border-white/[0.05] space-y-4"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-600">Viral Score:</span>
-                        <span className="text-sm font-bold text-emerald-400">{viralScore}/100</span>
-
-                        {/* Score bar */}
-                        <div className="w-24 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${viralScore}%` }}
-                            transition={{ duration: 0.8, ease: "easeOut" }}
-                            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500"
-                          />
+                      {/* Score row */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-slate-600">Viral Score:</span>
+                          <span className="text-sm font-bold text-emerald-400">{viralScore}/100</span>
+                          <div className="w-24 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${viralScore}%` }}
+                              transition={{ duration: 0.8, ease: "easeOut" }}
+                              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500"
+                            />
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex gap-3">
                         <button
                           onClick={handleGenerate}
                           className="text-xs text-slate-500 hover:text-violet-400 transition-colors flex items-center gap-1"
@@ -491,6 +529,36 @@ export default function GeneratorPage() {
                           <RefreshCw className="w-3 h-3" /> Регенерировать
                         </button>
                       </div>
+
+                      {/* Viral Analysis */}
+                      {viralAnalysis && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.5 }}
+                          className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3"
+                        >
+                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Почему такой score?</p>
+                          <div className="space-y-1.5">
+                            {viralAnalysis.positives?.map((p, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs text-emerald-400">
+                                <Check className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                                <span>{p}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {viralAnalysis.improvements?.length > 0 && (
+                            <div className="space-y-1.5 pt-2 border-t border-white/[0.05]">
+                              {viralAnalysis.improvements.map((imp, i) => (
+                                <div key={i} className="flex items-start gap-2 text-xs text-amber-400/80">
+                                  <Zap className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                                  <span>{imp}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
                     </motion.div>
                   )}
                 </motion.div>

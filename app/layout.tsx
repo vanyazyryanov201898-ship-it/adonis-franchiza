@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "@/lib/theme-context";
+import { ToastProvider } from "@/lib/toast-context";
 
 export const metadata: Metadata = {
   title: "ADONIS AI Platform — Контент-фабрика для продажи франшиз",
@@ -7,14 +9,34 @@ export const metadata: Metadata = {
   keywords: "ADONIS, франшиза, AI контент, автоматизация, TikTok, Instagram",
 };
 
+// Blocking script: sets theme/accent class before first paint to avoid flash
+const themeScript = `
+(function(){
+  try{
+    var t=localStorage.getItem('adonis_theme')||'dark';
+    var a=localStorage.getItem('adonis_accent')||'violet';
+    var c=localStorage.getItem('adonis_compact')==='true';
+    var r=t==='system'
+      ?(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')
+      :t;
+    var el=document.documentElement;
+    el.classList.remove('dark','light');
+    el.classList.add(r);
+    el.setAttribute('data-accent',a);
+    if(c)el.classList.add('compact');
+  }catch(e){}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" className="dark">
+    <html lang="ru" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -23,7 +45,11 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased noise-overlay">
-        {children}
+        <ThemeProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

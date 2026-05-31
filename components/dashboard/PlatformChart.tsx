@@ -10,6 +10,8 @@ const platformColors: Record<string, string> = {
   YouTube: "#ff4444",
   VK: "#0077ff",
   Telegram: "#26a5e4",
+  Rutube: "#003087",
+  Yappy: "#ff6600",
 };
 
 const platformIcons: Record<string, string> = {
@@ -18,6 +20,8 @@ const platformIcons: Record<string, string> = {
   YouTube: "Yt",
   VK: "VK",
   Telegram: "Tg",
+  Rutube: "Rt",
+  Yappy: "Yp",
 };
 
 const total = platformReachData.reduce((sum, p) => sum + p.reach, 0);

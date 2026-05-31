@@ -117,6 +117,8 @@ const platformColors: Record<string, string> = {
   YouTube: "#ff4444",
   VK: "#0077ff",
   Telegram: "#26a5e4",
+  Rutube: "#003087",
+  Yappy: "#ff6600",
 };
 
 const statusConfig: Record<VideoStatus, { label: string; color: string; bg: string }> = {
@@ -138,6 +140,8 @@ const wavePlatforms = [
   { id: "youtube", name: "YouTube", color: "#ff4444" },
   { id: "vk", name: "VK", color: "#0077ff" },
   { id: "telegram", name: "Telegram", color: "#26a5e4" },
+  { id: "rutube", name: "Rutube", color: "#003087" },
+  { id: "yappy", name: "Yappy", color: "#ff6600" },
 ];
 
 const wavePeriods = [
@@ -153,6 +157,31 @@ export default function VideoFactoryPage() {
   const [selectedMusic, setSelectedMusic] = useState("viral");
   const [selectedStyle, setSelectedStyle] = useState("viral");
   const [showNewForm, setShowNewForm] = useState(false);
+  const [newVideoTitle, setNewVideoTitle] = useState("");
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleCreateVideo = () => {
+    if (!newVideoTitle.trim()) return;
+    const newVideo: VideoItem = {
+      id: Date.now(),
+      title: newVideoTitle.trim(),
+      status: "queued",
+      progress: 0,
+      duration: "0:45",
+      platform: ["TikTok", "Instagram"],
+      viralScore: 80 + Math.floor(Math.random() * 15),
+      eta: "5 мин",
+    };
+    setVideos((prev) => [newVideo, ...prev]);
+    setNewVideoTitle("");
+    setShowNewForm(false);
+    showToast("Ролик добавлен в очередь рендера!");
+  };
 
   // AUTO-WAVE state
   const [waveOpen, setWaveOpen] = useState(true);
@@ -203,6 +232,7 @@ export default function VideoFactoryPage() {
   const estimatedCost = (waveCount * 0.24).toFixed(2);
   const estimatedTime = `${Math.ceil(waveCount * 1.5)} мин`;
 
+
   useEffect(() => {
     const interval = setInterval(() => {
       setVideos((prev) =>
@@ -223,6 +253,19 @@ export default function VideoFactoryPage() {
   return (
     <AppLayout title="Видео-фабрика" subtitle="AI рендер и управление роликами">
       <div className="p-6 space-y-6">
+        <AnimatePresence>
+          {notification && (
+            <motion.div
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-sm text-emerald-300 shadow-lg"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              {notification}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* AUTO-WAVE Block */}
         <motion.div
@@ -405,6 +448,11 @@ export default function VideoFactoryPage() {
         </motion.div>
 
         {/* Stats Row */}
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xs text-slate-500">Очередь и статистика — демо-данные.</span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-[10px] font-semibold text-amber-400 tracking-wide">📊 ДЕМО</span>
+          <span className="text-xs text-slate-500">Реальный рендер подключается под клиента.</span>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: "В рендере", value: totalRendering, icon: Loader2, color: "text-violet-400", spin: true },
@@ -534,6 +582,47 @@ export default function VideoFactoryPage() {
               <Plus className="w-4 h-4" />
               Создать новый ролик
             </motion.button>
+
+            {/* New Video Form */}
+            <AnimatePresence>
+              {showNewForm && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-4 rounded-2xl border border-violet-500/25 bg-violet-500/[0.06] space-y-3">
+                    <p className="text-xs font-semibold text-white">Новый ролик</p>
+                    <input
+                      type="text"
+                      value={newVideoTitle}
+                      onChange={(e) => setNewVideoTitle(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleCreateVideo()}
+                      placeholder="Название ролика..."
+                      className="w-full px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.1] text-sm text-white placeholder-slate-600 outline-none focus:border-violet-500/50 transition-colors"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleCreateVideo}
+                        disabled={!newVideoTitle.trim()}
+                        className="flex-1 py-2 rounded-xl bg-violet-600/70 text-xs font-semibold text-white hover:bg-violet-600/90 transition-colors disabled:opacity-40"
+                      >
+                        Добавить в очередь
+                      </motion.button>
+                      <button
+                        onClick={() => { setShowNewForm(false); setNewVideoTitle(""); }}
+                        className="px-3 py-2 rounded-xl bg-white/[0.06] text-xs text-slate-400 hover:text-white transition-colors"
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Right: Video Queue */}
@@ -543,7 +632,10 @@ export default function VideoFactoryPage() {
                 <Film className="w-4 h-4 text-violet-400" />
                 Очередь и готовые ролики
               </h3>
-              <button className="text-xs text-slate-500 hover:text-violet-400 transition-colors flex items-center gap-1">
+              <button
+                onClick={() => showToast("Настройки рендера будут доступны в следующем обновлении")}
+                className="text-xs text-slate-500 hover:text-violet-400 transition-colors flex items-center gap-1"
+              >
                 <Settings2 className="w-3.5 h-3.5" />
                 Настройки рендера
               </button>
@@ -637,17 +729,26 @@ export default function VideoFactoryPage() {
                         {/* Actions for completed */}
                         {video.status === "completed" && (
                           <div className="flex items-center gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="flex items-center gap-1 text-[11px] text-violet-400 hover:text-violet-300">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); showToast(`Просмотр: «${video.title.slice(0, 30)}...»`); }}
+                              className="flex items-center gap-1 text-[11px] text-violet-400 hover:text-violet-300"
+                            >
                               <Play className="w-3 h-3" />
                               Смотреть
                             </button>
                             <span className="text-slate-700">·</span>
-                            <button className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); showToast("Видео скачивается..."); }}
+                              className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300"
+                            >
                               <Download className="w-3 h-3" />
                               Скачать
                             </button>
                             <span className="text-slate-700">·</span>
-                            <button className="flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); showToast("Ролик отправлен в расписание автопостинга!"); }}
+                              className="flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300"
+                            >
                               <Zap className="w-3 h-3" />
                               Опубликовать
                             </button>

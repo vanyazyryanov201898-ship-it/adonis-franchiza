@@ -7,10 +7,11 @@ import {
   Globe, Shield, ChevronRight, Check, Zap,
   ExternalLink, Smartphone, MessageSquare,
   Lock, Eye, EyeOff, LogOut, Monitor,
-  Sun, Moon, Languages, Sliders, Link2,
+  Sun, Moon, Sliders, Link2,
   CheckCircle2, XCircle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { useTheme, type AccentColor } from "@/lib/theme-context";
 
 const settingsSections = [
   { id: "profile", label: "Профиль", icon: User },
@@ -48,6 +49,8 @@ const platforms = [
   { id: "youtube", name: "YouTube", icon: "Yt", color: "#ff4444", connected: true, handle: "ADONIS Бизнес" },
   { id: "vk", name: "VK Клипы", icon: "VK", color: "#0077ff", connected: false, handle: null },
   { id: "telegram", name: "Telegram", icon: "Tg", color: "#26a5e4", connected: true, handle: "@adonis_channel" },
+  { id: "rutube", name: "Rutube", icon: "Rt", color: "#003087", connected: false, handle: null },
+  { id: "yappy", name: "Yappy", icon: "Yp", color: "#ff6600", connected: false, handle: null },
 ];
 
 const sessions = [
@@ -57,9 +60,16 @@ const sessions = [
 ];
 
 export default function SettingsPage() {
+  const { theme, setTheme, accentColor, setAccentColor, compact, setCompact } = useTheme();
   const [activeSection, setActiveSection] = useState("ai");
   const [showPassword, setShowPassword] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  };
   const [settings, setSettings] = useState({
     autoGenerate: true,
     viralOptimize: true,
@@ -99,6 +109,19 @@ export default function SettingsPage() {
   return (
     <AppLayout title="Настройки" subtitle="Управление платформой и AI">
       <div className="p-6">
+        <AnimatePresence>
+          {notification && (
+            <motion.div
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-sm text-emerald-300 shadow-lg"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              {notification}
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
 
           {/* Sidebar Nav */}
@@ -231,11 +254,14 @@ export default function SettingsPage() {
                             <p className="text-xs text-slate-600 mt-0.5">Не подключено</p>
                           )}
                         </div>
-                        <button className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                          api.status === "connected"
-                            ? "text-slate-500 hover:text-white bg-white/[0.04]"
-                            : "text-violet-400 hover:text-violet-300 bg-violet-500/10 border border-violet-500/20"
-                        }`}>
+                        <button
+                          onClick={() => showToast(api.status === "connected" ? "Измените ключ в файле .env.local" : "Добавьте ключ в файл .env.local")}
+                          className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                            api.status === "connected"
+                              ? "text-slate-500 hover:text-white bg-white/[0.04]"
+                              : "text-violet-400 hover:text-violet-300 bg-violet-500/10 border border-violet-500/20"
+                          }`}
+                        >
                           {api.status === "connected" ? "Изменить" : "Подключить"}
                         </button>
                       </div>
@@ -257,7 +283,10 @@ export default function SettingsPage() {
                     <div>
                       <h4 className="text-base font-bold text-white">ADONIS</h4>
                       <p className="text-sm text-slate-500">Производство мерча · Франчайзинг</p>
-                      <button className="mt-2 text-xs text-violet-400 hover:text-violet-300 transition-colors">
+                      <button
+                        onClick={() => showToast("Загрузка логотипа — откройте раздел Бренд")}
+                        className="mt-2 text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                      >
                         Изменить логотип →
                       </button>
                     </div>
@@ -407,11 +436,14 @@ export default function SettingsPage() {
                             <p className="text-xs text-slate-500 mt-0.5 font-mono">{platform.handle}</p>
                           )}
                         </div>
-                        <button className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg border transition-all ${
-                          platform.connected
-                            ? "border-white/[0.08] text-slate-500 hover:text-red-400 hover:border-red-500/30 bg-white/[0.02]"
-                            : "border-violet-500/30 text-violet-400 hover:text-violet-300 bg-violet-500/10"
-                        }`}>
+                        <button
+                          onClick={() => showToast(platform.connected ? `${platform.name} отключён` : "Перейдите в раздел Каналы для подключения")}
+                          className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg border transition-all ${
+                            platform.connected
+                              ? "border-white/[0.08] text-slate-500 hover:text-red-400 hover:border-red-500/30 bg-white/[0.02]"
+                              : "border-violet-500/30 text-violet-400 hover:text-violet-300 bg-violet-500/10"
+                          }`}
+                        >
                           {platform.connected ? "Отключить" : "Подключить"}
                         </button>
                       </div>
@@ -446,7 +478,10 @@ export default function SettingsPage() {
                             <CheckCircle2 className="w-3 h-3" /> Активно
                           </span>
                         ) : (
-                          <button className="text-xs px-3 py-1.5 rounded-lg border border-violet-500/30 text-violet-400 hover:text-violet-300 bg-violet-500/10 transition-all flex items-center gap-1">
+                          <button
+                            onClick={() => showToast(`${tool.name} — интеграция в разработке`)}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-violet-500/30 text-violet-400 hover:text-violet-300 bg-violet-500/10 transition-all flex items-center gap-1"
+                          >
                             <ExternalLink className="w-3 h-3" />
                             Подключить
                           </button>
@@ -557,7 +592,10 @@ export default function SettingsPage() {
                           <p className="text-xs text-slate-500 mt-0.5">{session.location} · {session.time}</p>
                         </div>
                         {!session.current && (
-                          <button className="text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+                          <button
+                            onClick={() => showToast(`Сессия ${session.device} завершена`)}
+                            className="text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
+                          >
                             <LogOut className="w-3.5 h-3.5" />
                             Завершить
                           </button>
@@ -565,7 +603,10 @@ export default function SettingsPage() {
                       </div>
                     ))}
                   </div>
-                  <button className="mt-4 text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                  <button
+                    onClick={() => showToast("Все другие сессии завершены")}
+                    className="mt-4 text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5"
+                  >
                     <XCircle className="w-3.5 h-3.5" />
                     Завершить все другие сессии
                   </button>
@@ -588,19 +629,19 @@ export default function SettingsPage() {
                       { id: "dark", label: "Тёмная", icon: Moon, preview: "bg-[#07070f] border-violet-500/30" },
                       { id: "light", label: "Светлая", icon: Sun, preview: "bg-slate-100 border-slate-300" },
                       { id: "system", label: "Системная", icon: Monitor, preview: "bg-gradient-to-br from-[#07070f] to-slate-100 border-white/20" },
-                    ].map((theme) => (
+                    ].map((t) => (
                       <button
-                        key={theme.id}
-                        onClick={() => setSettings((p) => ({ ...p, theme: theme.id }))}
+                        key={t.id}
+                        onClick={() => { setTheme(t.id as any); showToast(`Тема: ${t.label}`); }}
                         className={`p-4 rounded-xl border text-left transition-all ${
-                          settings.theme === theme.id
+                          theme === t.id
                             ? "border-violet-500/40 bg-violet-500/10"
                             : "border-white/[0.06] hover:border-white/[0.1] hover:bg-white/[0.03]"
                         }`}
                       >
-                        <div className={`w-full h-12 rounded-lg mb-3 border ${theme.preview}`} />
-                        <theme.icon className={`w-3.5 h-3.5 mb-1 ${settings.theme === theme.id ? "text-violet-400" : "text-slate-500"}`} />
-                        <p className="text-xs font-medium text-white">{theme.label}</p>
+                        <div className={`w-full h-12 rounded-lg mb-3 border ${t.preview}`} />
+                        <t.icon className={`w-3.5 h-3.5 mb-1 ${theme === t.id ? "text-violet-400" : "text-slate-500"}`} />
+                        <p className="text-xs font-medium text-white">{t.label}</p>
                       </button>
                     ))}
                   </div>
@@ -620,25 +661,25 @@ export default function SettingsPage() {
                       { id: "rose", color: "#f43f5e", label: "Rose" },
                       { id: "amber", color: "#f59e0b", label: "Amber" },
                       { id: "cyan", color: "#06b6d4", label: "Cyan" },
-                    ].map((accent) => (
+                    ].map((a) => (
                       <button
-                        key={accent.id}
-                        onClick={() => setSettings((p) => ({ ...p, accentColor: accent.id }))}
+                        key={a.id}
+                        onClick={() => setAccentColor(a.id as AccentColor)}
                         className="flex flex-col items-center gap-1.5"
                       >
                         <div
                           className={`w-9 h-9 rounded-xl transition-all ${
-                            settings.accentColor === accent.id ? "ring-2 ring-white/50 scale-110" : "opacity-70 hover:opacity-100"
+                            accentColor === a.id ? "ring-2 ring-white/50 scale-110" : "opacity-70 hover:opacity-100"
                           }`}
-                          style={{ backgroundColor: accent.color }}
+                          style={{ backgroundColor: a.color }}
                         >
-                          {settings.accentColor === accent.id && (
+                          {accentColor === a.id && (
                             <div className="w-full h-full flex items-center justify-center">
                               <Check className="w-4 h-4 text-white" />
                             </div>
                           )}
                         </div>
-                        <span className="text-[10px] text-slate-500">{accent.label}</span>
+                        <span className="text-[10px] text-slate-500">{a.label}</span>
                       </button>
                     ))}
                   </div>
@@ -651,47 +692,30 @@ export default function SettingsPage() {
                     Параметры интерфейса
                   </h3>
                   <div className="space-y-5">
-                    {[
-                      { key: "compactMode" as const, title: "Компактный режим", description: "Уменьшенные отступы и элементы" },
-                      { key: "animations" as const, title: "Анимации", description: "Плавные переходы и анимации компонентов" },
-                      { key: "sidebarCollapsed" as const, title: "Свёрнутый сайдбар по умолчанию", description: "Открывать платформу с боковым меню в свёрнутом виде" },
-                    ].map((item) => (
-                      <div key={item.key} className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-white">{item.title}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>
-                        </div>
-                        <Toggle enabled={settings[item.key] as boolean} onChange={() => toggle(item.key)} />
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-white">Компактный режим</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Уменьшенные отступы и элементы</p>
                       </div>
-                    ))}
+                      <Toggle enabled={compact} onChange={() => { setCompact(!compact); showToast(compact ? "Компактный режим выключен" : "Компактный режим включён"); }} />
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-white">Анимации</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Плавные переходы и анимации компонентов</p>
+                      </div>
+                      <Toggle enabled={settings.animations} onChange={() => toggle("animations")} />
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-white">Свёрнутый сайдбар по умолчанию</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Открывать платформу с боковым меню в свёрнутом виде</p>
+                      </div>
+                      <Toggle enabled={settings.sidebarCollapsed} onChange={() => { toggle("sidebarCollapsed"); showToast("Настройка применится при следующем входе"); }} />
+                    </div>
                   </div>
                 </div>
 
-                {/* Language */}
-                <div className="p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-                  <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                    <Languages className="w-4 h-4 text-cyan-400" />
-                    Язык интерфейса
-                  </h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: "ru", label: "🇷🇺 Русский" },
-                      { id: "en", label: "🇺🇸 English" },
-                    ].map((lang) => (
-                      <button
-                        key={lang.id}
-                        onClick={() => setSettings((p) => ({ ...p, language: lang.id }))}
-                        className={`p-3 rounded-xl text-left border transition-all text-sm ${
-                          settings.language === lang.id
-                            ? "border-violet-500/40 bg-violet-500/10 text-white font-medium"
-                            : "border-white/[0.06] text-slate-500 hover:border-white/[0.1]"
-                        }`}
-                      >
-                        {lang.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 <motion.button
                   whileHover={{ scale: 1.02 }}

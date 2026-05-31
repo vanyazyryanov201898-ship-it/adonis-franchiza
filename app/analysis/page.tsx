@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, TrendingUp, Users, Eye, BarChart2,
-  Zap, Target, Clock, Calendar, ChevronRight,
-  CheckCircle2, AlertTriangle, Sparkles, Play,
+  Zap, Target, Calendar, ChevronRight,
+  CheckCircle2, AlertTriangle, Sparkles,
   ArrowUpRight, Loader2, FileText, Video, Image,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
@@ -16,56 +17,10 @@ const platforms = [
   { id: "telegram", name: "Telegram", abbr: "Tg", color: "#26a5e4", available: true },
   { id: "youtube", name: "YouTube", abbr: "YT", color: "#ff4444", available: false },
   { id: "vk", name: "VK", abbr: "VK", color: "#0077ff", available: false },
+  { id: "rutube", name: "Rutube", abbr: "Rt", color: "#003087", available: false },
+  { id: "yappy", name: "Yappy", abbr: "Yp", color: "#ff6600", available: false },
 ];
 
-const mockAnalysis = {
-  channel: {
-    name: "Бизнес с нуля",
-    username: "@biznes_s_nulya",
-    platform: "TikTok",
-    followers: 284000,
-    avgViews: 124000,
-    totalPosts: 312,
-    er: 6.8,
-    category: "Бизнес / Франчайзинг",
-    postingFreq: "1.4 поста/день",
-    avgDuration: "47 сек",
-  },
-  score: 72,
-  strengths: [
-    "Регулярные публикации — высокая частота постинга",
-    "Хорошие хуки в первые 3 секунды",
-    "Тема франчайзинга даёт стабильный спрос",
-  ],
-  weaknesses: [
-    "Слабые CTA — нет призыва к действию в 70% видео",
-    "Не используют трендовые звуки и музыку",
-    "Отсутствует контент про «день из жизни» — сейчас в тренде",
-    "Нет серийного контента (сериал/рубрика)",
-  ],
-  contentTypes: [
-    { type: "Мотивационные видео", share: 42, trend: "↓ Снижается", color: "#fe2c55" },
-    { type: "Разборы бизнеса", share: 28, trend: "↑ Растёт", color: "#10b981" },
-    { type: "Личный опыт", share: 18, trend: "↑ Растёт", color: "#8b5cf6" },
-    { type: "Обучение", share: 12, trend: "→ Стабильно", color: "#3b82f6" },
-  ],
-  contentPlan: [
-    { day: "Пн", date: "26 мая", title: "Сколько реально зарабатывают партнёры ADONIS", format: "video", viralScore: 94, platform: "TikTok" },
-    { day: "Вт", date: "27 мая", title: "День из жизни владельца франшизы — будни производства", format: "video", viralScore: 91, platform: "Instagram" },
-    { day: "Ср", date: "28 мая", title: "3 ошибки при выборе франшизы (я их все совершил)", format: "video", viralScore: 89, platform: "TikTok" },
-    { day: "Чт", date: "29 мая", title: "За кулисами: как делается 500 изделий в день", format: "video", viralScore: 87, platform: "YouTube" },
-    { day: "Пт", date: "30 мая", title: "Открытый ответ: почему я выбрал не найм, а производство", format: "video", viralScore: 93, platform: "TikTok" },
-    { day: "Сб", date: "31 мая", title: "Кейс партнёра: вложил 1.2M → получает 340K/мес", format: "video", viralScore: 96, platform: "Instagram" },
-    { day: "Вс", date: "1 июн", title: "Вопрос-ответ: всё что вы хотели знать о мерч-бизнесе", format: "post", viralScore: 82, platform: "Telegram" },
-    { day: "Пн", date: "2 июн", title: "Как мы открываем нового партнёра за 30 дней", format: "video", viralScore: 90, platform: "TikTok" },
-    { day: "Вт", date: "3 июн", title: "Правда о первых 3 месяцах в бизнесе", format: "video", viralScore: 88, platform: "Instagram" },
-    { day: "Ср", date: "4 июн", title: "Сравнение: своё производство vs аутсорс", format: "video", viralScore: 85, platform: "YouTube" },
-    { day: "Чт", date: "5 июн", title: "Живой поток: отвечаю на вопросы про франшизу", format: "video", viralScore: 79, platform: "TikTok" },
-    { day: "Пт", date: "6 июн", title: "Итоги месяца: наши цифры и планы", format: "post", viralScore: 84, platform: "Telegram" },
-    { day: "Сб", date: "7 июн", title: "Рассказываю что пошло не так и как мы это исправили", format: "video", viralScore: 92, platform: "Instagram" },
-    { day: "Вс", date: "8 июн", title: "Лучшие моменты недели — нарезка", format: "video", viralScore: 78, platform: "TikTok" },
-  ],
-};
 
 const formatIcons = { video: Video, post: FileText, image: Image };
 const platformColors: Record<string, string> = {
@@ -73,28 +28,97 @@ const platformColors: Record<string, string> = {
   Instagram: "#e91e8c",
   YouTube: "#ff4444",
   Telegram: "#26a5e4",
+  Rutube: "#003087",
+  Yappy: "#ff6600",
 };
 
+type AnalysisResult = {
+  channel: {
+    name: string;
+    username: string;
+    platform: string;
+    followers: number;
+    avgViews: number;
+    totalPosts: number;
+    er: number;
+    category: string;
+    postingFreq: string;
+    avgDuration: string;
+  };
+  score: number;
+  strengths: string[];
+  weaknesses: string[];
+  contentTypes: { type: string; share: number; trend: string; color: string }[];
+  contentPlan: { day: string; date: string; title: string; format: string; viralScore: number; platform: string }[];
+  _sourceHint?: string;
+  _isRealData?: boolean;
+};
+
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
 export default function AnalysisPage() {
+  const router = useRouter();
   const [url, setUrl] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState("tiktok");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState<typeof mockAnalysis | null>(null);
-  const [analysesLeft] = useState(3);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
 
-  const handleAnalyze = () => {
+  const showToast = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3500);
+  };
+
+  const handleAnalyze = async () => {
     if (!url.trim()) return;
     setIsAnalyzing(true);
     setResult(null);
-    setTimeout(() => {
+    setError(null);
+
+    try {
+      const platformName = platforms.find((p) => p.id === selectedPlatform)?.name || "TikTok";
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url.trim(), platform: platformName }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Ошибка анализа");
+        return;
+      }
+
+      setResult(data);
+    } catch (err: any) {
+      setError("Сеть недоступна или сервер не отвечает");
+    } finally {
       setIsAnalyzing(false);
-      setResult(mockAnalysis);
-    }, 3000);
+    }
   };
 
   return (
     <AppLayout title="Анализ каналов" subtitle="AI-диагностика конкурентов и генерация контент-плана">
       <div className="p-6 space-y-6">
+        <AnimatePresence>
+          {notification && (
+            <motion.div
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-sm text-emerald-300 shadow-lg"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              {notification}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Input Section */}
         <motion.div
@@ -107,7 +131,7 @@ export default function AnalysisPage() {
             <h3 className="text-sm font-semibold text-white">Анализ канала конкурента</h3>
             <div className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20">
               <Sparkles className="w-3 h-3 text-violet-400" />
-              <span className="text-xs text-violet-300">{analysesLeft} бесплатных</span>
+              <span className="text-xs text-violet-300">Claude AI</span>
             </div>
           </div>
 
@@ -183,6 +207,31 @@ export default function AnalysisPage() {
           </p>
         </motion.div>
 
+        {/* Error State */}
+        <AnimatePresence>
+          {error && !isAnalyzing && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="p-6 rounded-2xl border border-red-500/20 bg-red-500/5 flex flex-col items-center gap-4 text-center"
+            >
+              <AlertTriangle className="w-10 h-10 text-red-400" />
+              <div>
+                <p className="text-white font-semibold mb-1">Ошибка анализа</p>
+                <p className="text-red-400 text-sm">{error}</p>
+                <p className="text-slate-600 text-xs mt-2">Убедитесь что ANTHROPIC_API_KEY указан в .env.local</p>
+              </div>
+              <button
+                onClick={handleAnalyze}
+                className="px-4 py-2 rounded-xl bg-white/[0.06] text-sm text-white hover:bg-white/[0.1] transition-colors"
+              >
+                Попробовать снова
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Loading State */}
         <AnimatePresence>
           {isAnalyzing && (
@@ -230,6 +279,22 @@ export default function AnalysisPage() {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-6"
             >
+              {/* Data source badge */}
+              {result._isRealData ? (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] text-[11px] text-emerald-400">
+                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="flex-1">Данные получены со страницы канала — Claude AI работал с реальной информацией</span>
+                  {result._sourceHint && (
+                    <span className="text-emerald-600 truncate max-w-xs hidden md:block">{result._sourceHint.slice(0, 80)}…</span>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] text-[11px] text-amber-400">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>Страница канала недоступна для парсинга — метрики оценены AI. Для точных данных проверьте профиль вручную.</span>
+                </div>
+              )}
+
               {/* Channel Overview */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Main Info */}
@@ -280,8 +345,8 @@ export default function AnalysisPage() {
                 {/* Metrics */}
                 <div className="lg:col-span-2 grid grid-cols-2 gap-3">
                   {[
-                    { label: "Подписчиков", value: `${(result.channel.followers / 1000).toFixed(0)}K`, icon: Users, color: "text-violet-400", bg: "bg-violet-400/10" },
-                    { label: "Ср. просмотры", value: `${(result.channel.avgViews / 1000).toFixed(0)}K`, icon: Eye, color: "text-blue-400", bg: "bg-blue-400/10" },
+                    { label: "Подписчиков", value: fmtNum(result.channel.followers), icon: Users, color: "text-violet-400", bg: "bg-violet-400/10" },
+                    { label: "Ср. просмотры", value: fmtNum(result.channel.avgViews), icon: Eye, color: "text-blue-400", bg: "bg-blue-400/10" },
                     { label: "Публикаций", value: result.channel.totalPosts, icon: BarChart2, color: "text-emerald-400", bg: "bg-emerald-400/10" },
                     { label: "Вовлечённость", value: `${result.channel.er}%`, icon: TrendingUp, color: "text-cyan-400", bg: "bg-cyan-400/10" },
                   ].map((metric, i) => (
@@ -389,6 +454,7 @@ export default function AnalysisPage() {
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
+                    onClick={() => showToast("Контент-план добавлен в расписание автопостинга!")}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl btn-ai text-xs font-medium text-white"
                   >
                     <Zap className="w-3.5 h-3.5" />
@@ -405,7 +471,9 @@ export default function AnalysisPage() {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.04 }}
+                        onClick={() => { sessionStorage.setItem("generator_topic", item.title); router.push("/generator"); }}
                         className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04] hover:border-violet-500/20 transition-all cursor-pointer group"
+                        title="Кликни чтобы сгенерировать сценарий"
                       >
                         {/* Day */}
                         <div className="text-center w-10 flex-shrink-0">

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Video, Flame, Users, Eye, BarChart3, Cpu, TrendingUp, Sparkles, ArrowRight, RefreshCw,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import OnboardingModal from "@/components/OnboardingModal";
 import MetricCard from "@/components/dashboard/MetricCard";
 import RevenueChart from "@/components/dashboard/RevenueChart";
 import PlatformChart from "@/components/dashboard/PlatformChart";
@@ -174,10 +176,10 @@ function AIProcessingBanner() {
           >
             <RefreshCw className="w-4 h-4 text-violet-400" />
           </motion.div>
-          <button className="flex items-center gap-1.5 text-xs text-violet-300 hover:text-violet-200 font-medium transition-colors">
+          <a href="/analytics" className="flex items-center gap-1.5 text-xs text-violet-300 hover:text-violet-200 font-medium transition-colors">
             Подробнее
             <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          </a>
         </div>
       </div>
     </motion.div>
@@ -185,6 +187,7 @@ function AIProcessingBanner() {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -197,6 +200,7 @@ export default function DashboardPage() {
       title="Дашборд"
       subtitle="Обзор AI-платформы ADONIS"
     >
+      <OnboardingModal />
       <div className="p-6 space-y-6">
         {/* AI Processing Banner */}
         <AIProcessingBanner />
@@ -204,9 +208,12 @@ export default function DashboardPage() {
         {/* Welcome + Quick Actions */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-white">
-              Добро пожаловать, <span className="gradient-text">Адонис</span> 👋
-            </h2>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-xl font-bold text-white">
+                Добро пожаловать, <span className="gradient-text">Адонис</span> 👋
+              </h2>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-[10px] font-700 text-amber-400 font-semibold tracking-wide">📊 ДЕМО</span>
+            </div>
             <p className="text-sm text-slate-500 mt-1">
               Сегодня AI сгенерировал <span className="text-violet-400 font-medium">14 роликов</span> и получил <span className="text-emerald-400 font-medium">89 лидов</span>
             </p>
@@ -215,6 +222,7 @@ export default function DashboardPage() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
+              onClick={() => router.push("/analytics")}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-sm text-slate-400 hover:text-white transition-colors"
             >
               <Eye className="w-4 h-4" />
@@ -223,6 +231,7 @@ export default function DashboardPage() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
+              onClick={() => router.push("/generator")}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl btn-ai text-sm text-white"
             >
               <Sparkles className="w-4 h-4" />

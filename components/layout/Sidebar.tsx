@@ -20,6 +20,7 @@ import {
   Link2,
   ScanSearch,
   Palette,
+  Repeat2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,13 @@ const navItems = [
     label: "AI Генератор",
     badge: null,
     color: "text-purple-400",
+  },
+  {
+    href: "/repurpose",
+    icon: Repeat2,
+    label: "Репурпозинг",
+    badge: "New",
+    color: "text-pink-400",
   },
   {
     href: "/video-factory",
@@ -96,7 +104,12 @@ const navItems = [
   },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
@@ -105,7 +118,13 @@ export default function Sidebar() {
       initial={false}
       animate={{ width: collapsed ? 72 : 256 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="relative flex flex-col h-screen bg-[#09091a] border-r border-[rgba(139,92,246,0.12)] overflow-hidden flex-shrink-0"
+      className={cn(
+        "relative flex flex-col h-screen overflow-hidden flex-shrink-0",
+        // Mobile: fixed overlay, hidden by default
+        "max-md:fixed max-md:left-0 max-md:top-0 max-md:z-50",
+        !mobileOpen && "max-md:hidden"
+      )}
+      style={{ backgroundColor: "var(--bg-secondary)", borderRight: "1px solid var(--border-default)" }}
     >
       {/* Background glow */}
       <div className="absolute inset-0 pointer-events-none">
@@ -181,7 +200,7 @@ export default function Sidebar() {
           const Icon = item.icon;
 
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} onClick={onMobileClose}>
               <motion.div
                 whileHover={{ x: collapsed ? 0 : 4 }}
                 whileTap={{ scale: 0.98 }}
@@ -233,6 +252,8 @@ export default function Sidebar() {
                       "px-1.5 py-0.5 text-[10px] font-bold rounded-md",
                       item.badge === "Live"
                         ? "bg-emerald-500/20 text-emerald-400 animate-pulse"
+                        : item.badge === "New"
+                        ? "bg-pink-500/20 text-pink-400"
                         : "bg-violet-500/20 text-violet-400"
                     )}
                   >

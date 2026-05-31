@@ -12,6 +12,8 @@ const platformColors: Record<string, string> = {
   YouTube: "#ff4444",
   VK: "#0077ff",
   Telegram: "#26a5e4",
+  Rutube: "#003087",
+  Yappy: "#ff6600",
 };
 
 export default function VideoQueue() {
