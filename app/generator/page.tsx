@@ -9,6 +9,7 @@ import {
   LayoutGrid, Send,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { pickImages } from "@/lib/carousel-images";
 
 const contentTypes = [
   { id: "scenario",    label: "Сценарий",  icon: Video,        description: "Полный сценарий ролика" },
@@ -83,6 +84,8 @@ export default function GeneratorPage() {
     hashtags: string; caption: string;
   } | null>(null);
   const [carouselSlide, setCarouselSlide] = useState(0);
+  const [carouselBgUrl, setCarouselBgUrl] = useState("");
+  const [slideImages, setSlideImages] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -153,6 +156,7 @@ export default function GeneratorPage() {
       if (data.viralAnalysis) setViralAnalysis(data.viralAnalysis);
       if (data.carouselData) {
         setCarouselData(data.carouselData);
+        setSlideImages(pickImages(data.carouselData.slides.length + 1));
         setStreamDone(true);
         setIsGenerating(false);
         return;
@@ -583,81 +587,95 @@ export default function GeneratorPage() {
 
               {/* Карусель превью */}
               {carouselData && streamDone && (
-                <motion.div
-                  key="carousel"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="space-y-4"
-                >
-                  {/* Slide viewer */}
-                  <div className="relative">
-                    {/* Cover slide */}
-                    {carouselSlide === 0 && (
-                      <div className="relative rounded-2xl overflow-hidden aspect-square max-w-sm mx-auto flex flex-col items-center justify-center p-8 text-center"
-                        style={{ background: "linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)" }}>
-                        <div className="absolute inset-0 opacity-10"
-                          style={{ backgroundImage: "radial-gradient(circle at 30% 20%, white 1px, transparent 1px), radial-gradient(circle at 70% 80%, white 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-                        <div className="relative z-10">
-                          <div className="text-xs font-bold uppercase tracking-widest text-white/60 mb-4">ADONIS</div>
-                          <h2 className="text-2xl font-black text-white leading-tight mb-3">{carouselData.cover}</h2>
-                          <p className="text-sm text-white/80">{carouselData.subtitle}</p>
-                          <div className="mt-6 flex items-center justify-center gap-1">
-                            {[0, ...carouselData.slides.map((_, i) => i + 1)].map((_, i) => (
-                              <div key={i} className={`h-1 rounded-full transition-all ${i === carouselSlide ? "w-6 bg-white" : "w-1.5 bg-white/30"}`} />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                <motion.div key="carousel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
 
-                    {/* Content slides */}
-                    {carouselSlide > 0 && carouselData.slides[carouselSlide - 1] && (
-                      <div className="relative rounded-2xl overflow-hidden aspect-square max-w-sm mx-auto flex flex-col justify-between p-7"
-                        style={{ background: carouselSlide % 2 === 0 ? "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)" : "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)" }}>
-                        <div>
-                          <div className="text-[10px] font-bold uppercase tracking-widest mb-4"
-                            style={{ color: "#8b5cf6" }}>
-                            {carouselSlide} / {carouselData.slides.length}
-                          </div>
-                          <h3 className="text-xl font-black text-white leading-tight mb-4">
-                            {carouselData.slides[carouselSlide - 1].heading}
-                          </h3>
-                          <p className="text-sm text-slate-300 leading-relaxed">
-                            {carouselData.slides[carouselSlide - 1].text}
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs font-bold text-violet-400">ADONIS</div>
-                          <div className="flex gap-1">
-                            {[0, ...carouselData.slides.map((_, i) => i + 1)].map((_, i) => (
-                              <div key={i} className={`h-1 rounded-full transition-all ${i === carouselSlide ? "w-6 bg-violet-400" : "w-1.5 bg-white/20"}`} />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                  {/* Фон — URL или авто из библиотеки */}
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <span className="text-[11px] text-slate-500 flex-shrink-0">Фон слайдов:</span>
+                    <input
+                      type="text"
+                      value={carouselBgUrl}
+                      onChange={(e) => setCarouselBgUrl(e.target.value)}
+                      placeholder="Вставь URL фото или оставь пустым (авто из библиотеки)"
+                      className="flex-1 bg-transparent text-xs text-white placeholder-slate-600 outline-none"
+                    />
+                    {carouselBgUrl && (
+                      <button onClick={() => setCarouselBgUrl("")} className="text-slate-600 hover:text-red-400 transition-colors text-xs">✕</button>
                     )}
-
-                    {/* Navigation */}
-                    <div className="flex items-center justify-between mt-3 max-w-sm mx-auto">
-                      <button
-                        onClick={() => setCarouselSlide(s => Math.max(0, s - 1))}
-                        disabled={carouselSlide === 0}
-                        className="p-2 rounded-xl bg-white/[0.06] text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <span className="text-xs text-slate-500">
-                        Слайд {carouselSlide + 1} из {carouselData.slides.length + 1}
-                      </span>
-                      <button
-                        onClick={() => setCarouselSlide(s => Math.min(carouselData.slides.length, s + 1))}
-                        disabled={carouselSlide === carouselData.slides.length}
-                        className="p-2 rounded-xl bg-white/[0.06] text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
                   </div>
+
+                  {/* Slide card */}
+                  {(() => {
+                    const totalSlides = carouselData.slides.length + 1;
+                    const bgPhoto = carouselBgUrl || slideImages[carouselSlide] || slideImages[0] || "";
+                    const isCover = carouselSlide === 0;
+                    const slide = isCover ? null : carouselData.slides[carouselSlide - 1];
+
+                    return (
+                      <div className="max-w-sm mx-auto">
+                        <div className="relative rounded-2xl overflow-hidden aspect-square">
+                          {/* Фото фон */}
+                          {bgPhoto && (
+                            <div className="absolute inset-0 bg-cover bg-center"
+                              style={{ backgroundImage: `url(${bgPhoto})` }} />
+                          )}
+                          {/* Тёмный оверлей */}
+                          <div className="absolute inset-0" style={{
+                            background: bgPhoto
+                              ? "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.75) 100%)"
+                              : "linear-gradient(135deg, #4c1d95 0%, #1e3a8a 100%)"
+                          }} />
+
+                          {/* Контент */}
+                          <div className="relative z-10 h-full flex flex-col justify-between p-7">
+                            {/* Top */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">ADONIS</span>
+                              <span className="text-[10px] text-white/50">{carouselSlide + 1} / {totalSlides}</span>
+                            </div>
+
+                            {/* Middle */}
+                            <div className={isCover ? "text-center" : ""}>
+                              {isCover ? (
+                                <>
+                                  <h2 className="text-2xl font-black text-white leading-tight mb-3 drop-shadow-lg">{carouselData.cover}</h2>
+                                  <p className="text-sm text-white/80">{carouselData.subtitle}</p>
+                                </>
+                              ) : (
+                                <>
+                                  <h3 className="text-xl font-black text-white leading-tight mb-3 drop-shadow-md">{slide?.heading}</h3>
+                                  <p className="text-sm text-white/85 leading-relaxed">{slide?.text}</p>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Dots */}
+                            <div className={`flex gap-1 ${isCover ? "justify-center" : ""}`}>
+                              {Array.from({ length: totalSlides }).map((_, i) => (
+                                <button key={i} onClick={() => setCarouselSlide(i)}
+                                  className={`h-1 rounded-full transition-all ${i === carouselSlide ? "w-6 bg-white" : "w-1.5 bg-white/30"}`} />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Navigation */}
+                        <div className="flex items-center justify-between mt-3">
+                          <button onClick={() => setCarouselSlide(s => Math.max(0, s - 1))}
+                            disabled={carouselSlide === 0}
+                            className="p-2 rounded-xl bg-white/[0.06] text-slate-400 hover:text-white disabled:opacity-30 transition-colors">
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <span className="text-xs text-slate-500">Слайд {carouselSlide + 1} из {totalSlides}</span>
+                          <button onClick={() => setCarouselSlide(s => Math.min(totalSlides - 1, s + 1))}
+                            disabled={carouselSlide === totalSlides - 1}
+                            className="p-2 rounded-xl bg-white/[0.06] text-slate-400 hover:text-white disabled:opacity-30 transition-colors">
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Caption + hashtags */}
                   <div className="p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] space-y-3">
@@ -670,22 +688,13 @@ export default function GeneratorPage() {
                       <p className="text-xs text-violet-400">{carouselData.hashtags}</p>
                     </div>
                     <div className="flex gap-2 pt-1">
-                      <button
-                        onClick={() => handleCopy(
-                          `${carouselData.caption}\n\n${carouselData.hashtags}`, "carousel-caption"
-                        )}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.08] text-xs text-slate-400 hover:text-white transition-colors"
-                      >
-                        {copiedId === "carousel-caption" ? <><Check className="w-3.5 h-3.5 text-emerald-400" /> Скопировано</> : <><Copy className="w-3.5 h-3.5" /> Копировать caption</>}
+                      <button onClick={() => handleCopy(`${carouselData.caption}\n\n${carouselData.hashtags}`, "carousel-caption")}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.08] text-xs text-slate-400 hover:text-white transition-colors">
+                        {copiedId === "carousel-caption" ? <><Check className="w-3.5 h-3.5 text-emerald-400" /> Скопировано</> : <><Copy className="w-3.5 h-3.5" /> Caption</>}
                       </button>
-                      <button
-                        onClick={() => handleCopy(
-                          [{ n: 0, heading: carouselData.cover, text: carouselData.subtitle }, ...carouselData.slides]
-                            .map(s => `[Слайд ${s.n + (s.n === 0 ? 0 : 0)}] ${s.heading}\n${s.text}`)
-                            .join("\n\n"), "carousel-all"
-                        )}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.08] text-xs text-slate-400 hover:text-white transition-colors"
-                      >
+                      <button onClick={() => handleCopy(
+                        [`Обложка: ${carouselData.cover}`, ...carouselData.slides.map(s => `Слайд ${s.n}: ${s.heading}\n${s.text}`)].join("\n\n"), "carousel-all"
+                      )} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.08] text-xs text-slate-400 hover:text-white transition-colors">
                         {copiedId === "carousel-all" ? <><Check className="w-3.5 h-3.5 text-emerald-400" /> Скопировано</> : <><Copy className="w-3.5 h-3.5" /> Все слайды</>}
                       </button>
                     </div>
