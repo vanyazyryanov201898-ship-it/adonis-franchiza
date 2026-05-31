@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Search, Cpu, ChevronDown, Sparkles, X, CheckCircle2, AlertCircle, Info, Menu, LogOut } from "lucide-react";
-import { getSupabase } from "@/lib/supabase";
+import { Bell, Search, Cpu, Sparkles, X, CheckCircle2, AlertCircle, Info, Menu, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface HeaderProps {
@@ -22,8 +21,7 @@ export default function Header({ title, subtitle, onMobileMenuToggle }: HeaderPr
   const router = useRouter();
 
   const handleLogout = async () => {
-    const sb = getSupabase();
-    if (sb) await sb.auth.signOut();
+    await fetch("/api/auth-check", { method: "DELETE" });
     router.push("/login");
     router.refresh();
   };

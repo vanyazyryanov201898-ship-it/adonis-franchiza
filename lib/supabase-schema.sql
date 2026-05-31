@@ -3,6 +3,14 @@
 -- Выполни в Supabase: SQL Editor → New Query → Run All
 -- ============================================================
 
+-- Удаляем старые таблицы если есть (CASCADE удалит зависимости)
+drop table if exists scheduled_posts  cascade;
+drop table if exists video_queue      cascade;
+drop table if exists leads            cascade;
+drop table if exists generated_content cascade;
+drop table if exists brand_settings   cascade;
+drop table if exists profiles         cascade;
+
 -- 1. Профили пользователей (создаётся автоматически при регистрации)
 create table if not exists profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
