@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Search, Cpu, ChevronDown, Sparkles, X, CheckCircle2, AlertCircle, Info, Menu } from "lucide-react";
+import { Bell, Search, Cpu, ChevronDown, Sparkles, X, CheckCircle2, AlertCircle, Info, Menu, LogOut } from "lucide-react";
+import { getSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
 interface HeaderProps {
@@ -19,6 +20,13 @@ const mockNotifications = [
 
 export default function Header({ title, subtitle, onMobileMenuToggle }: HeaderProps) {
   const router = useRouter();
+
+  const handleLogout = async () => {
+    const sb = getSupabase();
+    if (sb) await sb.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
   const [notifList, setNotifList] = useState(mockNotifications);
   const [currentTime, setCurrentTime] = useState<string>("");
   const [aiThinking, setAiThinking] = useState(false);
@@ -279,17 +287,26 @@ export default function Header({ title, subtitle, onMobileMenuToggle }: HeaderPr
             </AnimatePresence>
           </div>
 
-          {/* User avatar */}
-          <button className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-violet-500/20 transition-all">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br flex items-center justify-center text-xs font-bold text-white" style={{ background: `linear-gradient(135deg, var(--accent), var(--accent-2))` }}>
-              A
+          {/* User avatar + logout */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white"
+                style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}>
+                A
+              </div>
+              <div className="hidden md:block text-left">
+                <div className="text-xs font-medium text-white">Адонис</div>
+                <div className="text-[10px] text-slate-500">Admin</div>
+              </div>
             </div>
-            <div className="hidden md:block text-left">
-              <div className="text-xs font-medium text-white">Адонис</div>
-              <div className="text-[10px] text-slate-500">Admin</div>
-            </div>
-            <ChevronDown className="hidden md:block w-3 h-3 text-slate-600" />
-          </button>
+            <button
+              onClick={handleLogout}
+              title="Выйти"
+              className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-500 hover:text-red-400 hover:border-red-500/20 transition-all"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </header>
     </>
