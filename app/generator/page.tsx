@@ -5,17 +5,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Zap, Copy, RefreshCw, ChevronDown,
   Check, Flame, BookOpen, Video, MessageSquare, Hash, FileText,
-  History, Trash2, AlertCircle, Download,
+  History, Trash2, AlertCircle, Download, ChevronLeft, ChevronRight,
+  LayoutGrid, Send,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 
 const contentTypes = [
-  { id: "scenario", label: "Сценарий",    icon: Video,         description: "Полный сценарий ролика" },
-  { id: "hook",     label: "Хук",          icon: Zap,           description: "Цепляющее начало" },
-  { id: "cta",      label: "CTA",          icon: MessageSquare, description: "Призыв к действию" },
-  { id: "title",    label: "Заголовок",   icon: Hash,          description: "Виральный заголовок" },
-  { id: "description", label: "Описание", icon: FileText,      description: "Описание под видео" },
-  { id: "ideas",    label: "Идеи",         icon: BookOpen,      description: "5 идей для роликов" },
+  { id: "scenario",    label: "Сценарий",  icon: Video,        description: "Полный сценарий ролика" },
+  { id: "hook",        label: "Хук",       icon: Zap,          description: "Цепляющее начало" },
+  { id: "post",        label: "Пост",      icon: Send,         description: "Готовый пост для соцсетей" },
+  { id: "carousel",   label: "Карусель",  icon: LayoutGrid,   description: "Слайды для Instagram" },
+  { id: "cta",         label: "CTA",       icon: MessageSquare,description: "Призыв к действию" },
+  { id: "title",       label: "Заголовок", icon: Hash,         description: "Виральный заголовок" },
+  { id: "description", label: "Описание",  icon: FileText,     description: "Описание под видео" },
+  { id: "ideas",       label: "Идеи",      icon: BookOpen,     description: "5 идей для роликов" },
 ];
 
 const topics = [
@@ -74,6 +77,12 @@ export default function GeneratorPage() {
   const [streamDone, setStreamDone] = useState(false);
   const [viralScore, setViralScore] = useState<number | null>(null);
   const [viralAnalysis, setViralAnalysis] = useState<{positives: string[]; improvements: string[]} | null>(null);
+  const [carouselData, setCarouselData] = useState<{
+    cover: string; subtitle: string;
+    slides: {n: number; heading: string; text: string}[];
+    hashtags: string; caption: string;
+  } | null>(null);
+  const [carouselSlide, setCarouselSlide] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -118,6 +127,8 @@ export default function GeneratorPage() {
     setStreamDone(false);
     setViralScore(null);
     setViralAnalysis(null);
+    setCarouselData(null);
+    setCarouselSlide(0);
     setError(null);
 
     const topic = customTopic.trim() || selectedTopic;
@@ -140,6 +151,12 @@ export default function GeneratorPage() {
       const full: string = data.content;
       setViralScore(data.viralScore);
       if (data.viralAnalysis) setViralAnalysis(data.viralAnalysis);
+      if (data.carouselData) {
+        setCarouselData(data.carouselData);
+        setStreamDone(true);
+        setIsGenerating(false);
+        return;
+      }
       let i = 0;
       const speed = 6; // мс на символ
 
@@ -564,8 +581,120 @@ export default function GeneratorPage() {
                 </motion.div>
               )}
 
+              {/* Карусель превью */}
+              {carouselData && streamDone && (
+                <motion.div
+                  key="carousel"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-4"
+                >
+                  {/* Slide viewer */}
+                  <div className="relative">
+                    {/* Cover slide */}
+                    {carouselSlide === 0 && (
+                      <div className="relative rounded-2xl overflow-hidden aspect-square max-w-sm mx-auto flex flex-col items-center justify-center p-8 text-center"
+                        style={{ background: "linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)" }}>
+                        <div className="absolute inset-0 opacity-10"
+                          style={{ backgroundImage: "radial-gradient(circle at 30% 20%, white 1px, transparent 1px), radial-gradient(circle at 70% 80%, white 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+                        <div className="relative z-10">
+                          <div className="text-xs font-bold uppercase tracking-widest text-white/60 mb-4">ADONIS</div>
+                          <h2 className="text-2xl font-black text-white leading-tight mb-3">{carouselData.cover}</h2>
+                          <p className="text-sm text-white/80">{carouselData.subtitle}</p>
+                          <div className="mt-6 flex items-center justify-center gap-1">
+                            {[0, ...carouselData.slides.map((_, i) => i + 1)].map((_, i) => (
+                              <div key={i} className={`h-1 rounded-full transition-all ${i === carouselSlide ? "w-6 bg-white" : "w-1.5 bg-white/30"}`} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Content slides */}
+                    {carouselSlide > 0 && carouselData.slides[carouselSlide - 1] && (
+                      <div className="relative rounded-2xl overflow-hidden aspect-square max-w-sm mx-auto flex flex-col justify-between p-7"
+                        style={{ background: carouselSlide % 2 === 0 ? "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)" : "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)" }}>
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest mb-4"
+                            style={{ color: "#8b5cf6" }}>
+                            {carouselSlide} / {carouselData.slides.length}
+                          </div>
+                          <h3 className="text-xl font-black text-white leading-tight mb-4">
+                            {carouselData.slides[carouselSlide - 1].heading}
+                          </h3>
+                          <p className="text-sm text-slate-300 leading-relaxed">
+                            {carouselData.slides[carouselSlide - 1].text}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs font-bold text-violet-400">ADONIS</div>
+                          <div className="flex gap-1">
+                            {[0, ...carouselData.slides.map((_, i) => i + 1)].map((_, i) => (
+                              <div key={i} className={`h-1 rounded-full transition-all ${i === carouselSlide ? "w-6 bg-violet-400" : "w-1.5 bg-white/20"}`} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Navigation */}
+                    <div className="flex items-center justify-between mt-3 max-w-sm mx-auto">
+                      <button
+                        onClick={() => setCarouselSlide(s => Math.max(0, s - 1))}
+                        disabled={carouselSlide === 0}
+                        className="p-2 rounded-xl bg-white/[0.06] text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="text-xs text-slate-500">
+                        Слайд {carouselSlide + 1} из {carouselData.slides.length + 1}
+                      </span>
+                      <button
+                        onClick={() => setCarouselSlide(s => Math.min(carouselData.slides.length, s + 1))}
+                        disabled={carouselSlide === carouselData.slides.length}
+                        className="p-2 rounded-xl bg-white/[0.06] text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Caption + hashtags */}
+                  <div className="p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] space-y-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-1.5">Caption</p>
+                      <p className="text-sm text-slate-300 leading-relaxed">{carouselData.caption}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-1.5">Хэштеги</p>
+                      <p className="text-xs text-violet-400">{carouselData.hashtags}</p>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => handleCopy(
+                          `${carouselData.caption}\n\n${carouselData.hashtags}`, "carousel-caption"
+                        )}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.08] text-xs text-slate-400 hover:text-white transition-colors"
+                      >
+                        {copiedId === "carousel-caption" ? <><Check className="w-3.5 h-3.5 text-emerald-400" /> Скопировано</> : <><Copy className="w-3.5 h-3.5" /> Копировать caption</>}
+                      </button>
+                      <button
+                        onClick={() => handleCopy(
+                          [{ n: 0, heading: carouselData.cover, text: carouselData.subtitle }, ...carouselData.slides]
+                            .map(s => `[Слайд ${s.n + (s.n === 0 ? 0 : 0)}] ${s.heading}\n${s.text}`)
+                            .join("\n\n"), "carousel-all"
+                        )}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.08] text-xs text-slate-400 hover:text-white transition-colors"
+                      >
+                        {copiedId === "carousel-all" ? <><Check className="w-3.5 h-3.5 text-emerald-400" /> Скопировано</> : <><Copy className="w-3.5 h-3.5" /> Все слайды</>}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Пустой стейт */}
-              {!error && !isGenerating && !streamText && (
+              {!error && !isGenerating && !streamText && !carouselData && (
                 <motion.div
                   key="empty"
                   initial={{ opacity: 0 }}

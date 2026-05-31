@@ -104,12 +104,54 @@ function buildPrompt(type: string, topic: string, platform: string, tone: string
    Viral Score: [XX]/100
 
 [и так далее для каждой идеи]`,
+
+    post: `${base}
+
+Создай ГОТОВЫЙ ПОСТ для ${platformDesc[platform] || platform} по теме «${topic}».
+
+Формат строго такой:
+
+✍️ CAPTION:
+[основной текст поста 100-250 слов с эмодзи, личная история или факты, CTA в конце]
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+🏷 ХЭШТЕГИ:
+[15-20 релевантных хэштегов]
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+⏰ ЛУЧШЕЕ ВРЕМЯ: [время публикации]
+📊 ПРОГНОЗ ОХВАТА: [X–Y тысяч]
+💡 СОВЕТ: [одна рекомендация по усилению поста]`,
+
+    carousel: `${base}
+
+Создай КАРУСЕЛЬ для Instagram по теме «${topic}». Верни ТОЛЬКО валидный JSON без пояснений:
+
+{
+  "cover": "Цепляющий заголовок обложки (до 8 слов)",
+  "subtitle": "Подзаголовок обложки (1 строка)",
+  "slides": [
+    {"n": 1, "heading": "Заголовок слайда", "text": "Текст слайда 2-4 предложения с конкретными фактами/цифрами"},
+    {"n": 2, "heading": "...", "text": "..."},
+    {"n": 3, "heading": "...", "text": "..."},
+    {"n": 4, "heading": "...", "text": "..."},
+    {"n": 5, "heading": "...", "text": "..."},
+    {"n": 6, "heading": "...", "text": "..."},
+    {"n": 7, "heading": "CTA — заголовок последнего слайда", "text": "Призыв к действию + что сделать прямо сейчас"}
+  ],
+  "hashtags": "#хэштег1 #хэштег2 #хэштег3 #хэштег4 #хэштег5 #адонис #франшиза",
+  "caption": "Описание под постом 2-3 предложения"
+}
+
+Требования: реальные цифры ADONIS, конкретика в каждом слайде, логичная структура от проблемы к решению. Только JSON.`,
   };
 
   return prompts[type] || prompts.hook;
 }
 
-async function analyzeViralPotential(content: string, type: string, platform: string) {
+async function analyzeViralPotential(content: string, platform: string) {
   try {
     const analysisPrompt = `Ты — эксперт по вирусному контенту. Проанализируй этот контент для ${platform} и верни JSON.
 
@@ -159,10 +201,26 @@ export async function POST(req: NextRequest) {
       messages: [{ role: "user", content: prompt }],
     });
 
-    const content = message.content[0].type === "text" ? message.content[0].text : "";
+    const raw = message.content[0].type === "text" ? message.content[0].text : "";
 
-    // Анализ вирусности — параллельный запрос
-    const viralAnalysis = await analyzeViralPotential(content, type, platform);
+    // Карусель — парсим JSON отдельно
+    let content = raw;
+    let carouselData = null;
+
+    if (type === "carousel") {
+      try {
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        if (jsonMatch) carouselData = JSON.parse(jsonMatch[0]);
+        content = carouselData?.cover ?? raw;
+      } catch {
+        content = raw;
+      }
+    }
+
+    // Анализ вирусности — только для не-карусели
+    const viralAnalysis = type !== "carousel"
+      ? await analyzeViralPotential(raw, platform)
+      : null;
     const viralScore = viralAnalysis?.score ?? Math.floor(Math.random() * 12) + 85;
 
     // Сохраняем в Supabase (если настроен)
@@ -170,18 +228,15 @@ export async function POST(req: NextRequest) {
       const db = createServerClient();
       if (!db) throw new Error("not configured");
       await db.from("generated_content").insert({
-        type,
-        topic,
-        platform,
+        type, topic, platform,
         tone: tone || "Доверительный",
-        content,
-        viral_score: viralScore,
+        content, viral_score: viralScore,
       });
     } catch (dbErr) {
       console.warn("Supabase не настроен:", dbErr);
     }
 
-    return NextResponse.json({ content, viralScore, viralAnalysis });
+    return NextResponse.json({ content, viralScore, viralAnalysis, carouselData });
   } catch (err: any) {
     console.error("Generate error:", err);
     return NextResponse.json(
