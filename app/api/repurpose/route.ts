@@ -2,18 +2,19 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { ADONIS_CONTEXT } from "@/lib/adonis-context";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const PLATFORM_SPECS: Record<string, { name: string; format: string; maxChars: number }> = {
-  tiktok:    { name: "TikTok",            format: "Сценарий ролика",     maxChars: 600 },
-  instagram: { name: "Instagram Reels",   format: "Описание + хуки",     maxChars: 400 },
-  youtube:   { name: "YouTube Shorts",    format: "Сценарий + описание", maxChars: 600 },
-  telegram:  { name: "Telegram",          format: "Пост с хэштегами",    maxChars: 800 },
-  vk:        { name: "VK Клипы",          format: "Пост для VK",         maxChars: 500 },
-  rutube:    { name: "Rutube",            format: "Описание видео",      maxChars: 500 },
-  email:     { name: "Email-рассылка",    format: "Письмо подписчикам",  maxChars: 600 },
-  whatsapp:  { name: "WhatsApp/Telegram", format: "Сообщение для рассылки", maxChars: 300 },
+  tiktok:    { name: "TikTok",            format: "Сценарий ролика",        maxChars: 600 },
+  instagram: { name: "Instagram Reels",   format: "Описание + хуки",        maxChars: 400 },
+  youtube:   { name: "YouTube Shorts",    format: "Сценарий + описание",    maxChars: 600 },
+  telegram:  { name: "Telegram",          format: "Пост с хэштегами",       maxChars: 800 },
+  vk:        { name: "VK Клипы",          format: "Пост для VK",            maxChars: 500 },
+  rutube:    { name: "Rutube",            format: "Описание видео",         maxChars: 500 },
+  email:     { name: "Email-рассылка",    format: "Письмо подписчикам",     maxChars: 600 },
+  whatsapp:  { name: "WhatsApp/Telegram", format: "Личное сообщение",       maxChars: 300 },
 };
 
 export async function POST(req: NextRequest) {
@@ -28,35 +29,40 @@ export async function POST(req: NextRequest) {
       .filter((p: string) => PLATFORM_SPECS[p])
       .map((p: string) => PLATFORM_SPECS[p]);
 
-    const prompt = `Ты — AI-копирайтер для ADONIS (франшиза брендирования одежды, партнёры зарабатывают 150-300К/мес).
+    const prompt = `Ты — контент-стратег АДОНИС. Адаптируешь контент под разные платформы с одной целью: привести лиды на франшизу.
+
+${ADONIS_CONTEXT}
 
 Исходный контент:
 """
 ${originalContent}
 """
 
-Адаптируй этот контент для ${selectedPlatforms.length} платформ. Верни ТОЛЬКО валидный JSON:
+Адаптируй для ${selectedPlatforms.length} платформ. Сохраняй суть, цифры и голос бренда.
+Каждая адаптация должна быть нативной для платформы — не просто укороченная копия.
+
+Верни ТОЛЬКО валидный JSON:
 
 {
   "variations": [
-    ${selectedPlatforms.map((p: {name: string; format: string; maxChars: number}, i: number) => `{
+    ${selectedPlatforms.map((p: {name: string; format: string; maxChars: number}) => `{
       "platform": "${p.name}",
       "format": "${p.format}",
-      "content": "АДАПТИРОВАННЫЙ КОНТЕНТ ДЛЯ ${p.name.toUpperCase()} (макс ${p.maxChars} симв, в формате ${p.format})"
+      "content": "АДАПТИРОВАННЫЙ КОНТЕНТ ДЛЯ ${p.name.toUpperCase()} (макс ${p.maxChars} симв)"
     }`).join(",\n    ")}
   ]
 }
 
-Требования для каждой платформы:
-- TikTok: короткий хук 3-5 сек + сценарий + хэштеги
-- Instagram Reels: эмоциональный текст + 5-7 хэштегов + CTA
-- YouTube Shorts: заголовок + тайм-коды + описание
-- Telegram: развёрнутый пост с форматированием и эмодзи
-- VK: дружелюбный тон + призыв к действию
-- Email: тема письма + текст + подпись
-- WhatsApp: короткое личное сообщение
+Требования по платформам:
+- TikTok: короткий цепляющий хук 3-5 сек + сценарий + хэштеги. Динамично, без воды.
+- Instagram Reels: эмоциональный текст + сильные хуки + 5-7 хэштегов + CTA в директ.
+- YouTube Shorts: заголовок + структура + описание с ключевыми словами.
+- Telegram: развёрнутый пост в стиле Ильи — личный, с цифрами, эмодзи по делу.
+- VK: дружелюбный тон, призыв к действию, хэштеги.
+- Email: тема письма (до 50 симв) + текст + подпись + CTA.
+- WhatsApp: короткое личное сообщение как от человека, не рассылка.
 
-Сохраняй суть и цифры из исходника. Отвечай ТОЛЬКО JSON.`;
+Отвечай ТОЛЬКО JSON.`;
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
