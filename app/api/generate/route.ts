@@ -9,8 +9,22 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// ─── Цель контента ────────────────────────────────────────────
+const GOAL_CONTEXT: Record<string, string> = {
+  sell:
+    "ЦЕЛЬ: привести лид на франшизу АДОНИС. Каждый элемент ведёт к заявке. CTA — оставить заявку / написать в директ / узнать условия.",
+  expert:
+    "ЦЕЛЬ: дать пользу и экспертизу — про рынок мерча, брендинг, предпринимательство. Показываем глубокие знания. АДОНИС упоминается как живой пример, не как реклама. Без агрессивного CTA — максимум лёгкое «у нас так и работает». Человек должен сохранить или поделиться.",
+  story:
+    "ЦЕЛЬ: вызвать эмоцию и доверие через личную историю. Пишем от Ильи или партнёра: боль → путь → результат. Никаких явных продаж. Человек должен проникнуться и подписаться.",
+  case:
+    "ЦЕЛЬ: показать реальный результат партнёра — конкретные цифры, имя, город, жизнь до и после. В самом конце мягкий намёк: «если интересно как — пиши». Не давить.",
+  entertain:
+    "ЦЕЛЬ: развлечь и получить охваты. Лёгкий, трендовый, с иронией — о мерче, бизнесе, предпринимательстве. Без продажи вообще. Люди должны лайкнуть и поделиться.",
+};
+
 // ─── Промпты по типу контента ─────────────────────────────────
-function buildPrompt(type: string, topic: string, platform: string, tone: string): string {
+function buildPrompt(type: string, topic: string, platform: string, tone: string, goal = "sell"): string {
   const toneDesc: Record<string, string> = {
     "Доверительный": "доверительный, личный — как разговор брата с братом",
     "Экспертный": "экспертный, авторитетный, с конкретными цифрами и фактами",
@@ -27,16 +41,19 @@ function buildPrompt(type: string, topic: string, platform: string, tone: string
     "Telegram": "Telegram-канал (текст/видео, деловая аудитория, читают вдумчиво)",
   };
 
-  const base = `Ты — контент-стратег и копирайтер бренда АДОНИС. Твоя единственная цель — создавать контент, который приносит заявки на франшизу.
+  const goalDesc = GOAL_CONTEXT[goal] || GOAL_CONTEXT.sell;
+
+  const base = `Ты — контент-стратег и копирайтер бренда АДОНИС.
 
 ${ADONIS_CONTEXT}
+
+${goalDesc}
 
 Тон: ${toneDesc[tone] || toneDesc["Доверительный"]}.
 Платформа: ${platformDesc[platform] || platform}.
 Тема: ${topic}.
 
 ЗАПРЕЩЕНО: корпоративный язык, «погрузиться», «трансформация», «экосистема», «уникальный», «синергия», пустые слова без цифр.
-ОБЯЗАТЕЛЬНО: живой язык, конкретные цифры из кейсов, финальный CTA на заявку.
 Отвечай ТОЛЬКО на русском. Без вступлений — сразу контент.`;
 
   const prompts: Record<string, string> = {
@@ -228,13 +245,13 @@ ${content.slice(0, 800)}
 
 export async function POST(req: NextRequest) {
   try {
-    const { type, topic, platform, tone, brandVoice } = await req.json();
+    const { type, topic, platform, tone, goal, brandVoice } = await req.json();
 
     if (!type || !topic || !platform) {
       return NextResponse.json({ error: "Не указаны обязательные параметры" }, { status: 400 });
     }
 
-    let prompt = buildPrompt(type, topic, platform, tone || "Доверительный");
+    let prompt = buildPrompt(type, topic, platform, tone || "Доверительный", goal || "sell");
 
     if (brandVoice) {
       prompt += `\n\nВАЖНО — Голос бренда: ${brandVoice}\nПиши строго в этом стиле.`;

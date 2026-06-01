@@ -43,6 +43,14 @@ const topics = [
 const tones = ["Доверительный", "Экспертный", "Эмоциональный", "Провокационный", "Лёгкий"];
 const platforms = ["TikTok", "Instagram", "YouTube", "VK", "Telegram", "Rutube", "Yappy"];
 
+const contentGoals = [
+  { id: "expert",   label: "Экспертный",   emoji: "🎓", hint: "Польза без продажи" },
+  { id: "story",    label: "История",      emoji: "❤️", hint: "Эмоция и доверие" },
+  { id: "case",     label: "Кейс",         emoji: "📊", hint: "Результаты партнёра" },
+  { id: "entertain",label: "Развлечение",  emoji: "😄", hint: "Охваты и виральность" },
+  { id: "sell",     label: "Продающий",    emoji: "💰", hint: "Прямая заявка" },
+];
+
 // ─── Анимированный курсор при стриминге ────────────────────
 function StreamText({ text, done }: { text: string; done: boolean }) {
   return (
@@ -72,6 +80,7 @@ export default function GeneratorPage() {
   const [customTopic, setCustomTopic] = useState("");
   const [tone, setTone] = useState("Доверительный");
   const [platform, setPlatform] = useState("TikTok");
+  const [goal, setGoal] = useState("expert");
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [streamText, setStreamText] = useState("");
@@ -158,7 +167,7 @@ export default function GeneratorPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: selectedType, topic, platform, tone }),
+        body: JSON.stringify({ type: selectedType, topic, platform, tone, goal }),
       });
 
       const data = await res.json();
@@ -310,6 +319,26 @@ export default function GeneratorPage() {
             {/* Параметры */}
             <div className="p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] space-y-4">
               <h3 className="text-sm font-semibold text-white">Параметры</h3>
+
+              <div>
+                <label className="text-xs text-slate-500 mb-2 block">Цель контента</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {contentGoals.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => setGoal(g.id)}
+                      title={g.hint}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                        goal === g.id
+                          ? "bg-orange-600/70 text-white"
+                          : "bg-white/[0.04] text-slate-600 hover:text-slate-400"
+                      }`}
+                    >
+                      {g.emoji} {g.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div>
                 <label className="text-xs text-slate-500 mb-2 block">Тон подачи</label>
