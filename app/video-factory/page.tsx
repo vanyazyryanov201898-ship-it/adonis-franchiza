@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import {
   Play, Plus, Loader2, CheckCircle2, Clock,
   Zap, Music, Type, Mic, Film, Settings2, Download,
   Eye, Sparkles, Waves, ChevronDown, ChevronUp,
-  User, Bot, BarChart2, Palette, Layers,
+  User, Bot, BarChart2, Palette, Layers, PieChart,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 
@@ -256,7 +257,7 @@ export default function VideoFactoryPage() {
             rows={3}
             className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder-slate-600 outline-none focus:border-violet-500/40 transition-colors resize-none"
           />
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-3">
             <a
               href="/generator"
               className="text-[11px] text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1"
@@ -264,6 +265,15 @@ export default function VideoFactoryPage() {
               <Sparkles className="w-3 h-3" />
               Перейти в AI Генератор и создать сценарий
             </a>
+            {selectedType === "infographic" && (
+              <Link
+                href="/infographics"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-[11px] font-medium text-cyan-400 hover:bg-cyan-500/15 hover:text-cyan-300 transition-all"
+              >
+                <PieChart className="w-3 h-3" />
+                Написать сценарий инфографики
+              </Link>
+            )}
           </div>
         </motion.div>
 

@@ -20,7 +20,6 @@ const contentTypes = [
   { id: "title",       label: "Заголовок",   icon: Hash,         description: "Виральный заголовок" },
   { id: "description", label: "Описание",    icon: FileText,     description: "Описание под видео" },
   { id: "ideas",       label: "Идеи",        icon: BookOpen,     description: "5 идей для роликов" },
-  { id: "infographic", label: "Инфографика", icon: BarChart2,    description: "Сценарий под инфографику" },
 ];
 
 const topics = [
