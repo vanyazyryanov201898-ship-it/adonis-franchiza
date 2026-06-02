@@ -113,11 +113,16 @@ export default function InfographicsPage() {
         body: JSON.stringify({ topic: activeTopic, category, visualType }),
       });
 
-      const json = await res.json();
-      if (!res.ok) { setError(json.error || "Ошибка сервера"); return; }
+      const text = await res.text();
+      let json: any;
+      try { json = JSON.parse(text); } catch {
+        setError(`Ответ сервера не JSON (${res.status}): ${text.slice(0, 200)}`);
+        return;
+      }
+      if (!res.ok) { setError(json.error || `HTTP ${res.status}`); return; }
       setData(json);
-    } catch {
-      setError("Сеть недоступна или сервер не отвечает");
+    } catch (e: any) {
+      setError(e?.message || "Сеть недоступна или сервер не отвечает");
     } finally {
       setIsLoading(false);
     }
