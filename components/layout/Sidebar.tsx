@@ -21,6 +21,7 @@ import {
   ScanSearch,
   Palette,
   Repeat2,
+  PieChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +46,13 @@ const navItems = [
     label: "AI Генератор",
     badge: null,
     color: "text-purple-400",
+  },
+  {
+    href: "/infographics",
+    icon: PieChart,
+    label: "Инфографика",
+    badge: "New",
+    color: "text-cyan-400",
   },
   {
     href: "/repurpose",
