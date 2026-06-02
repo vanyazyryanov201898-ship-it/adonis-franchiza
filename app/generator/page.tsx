@@ -148,9 +148,11 @@ export default function GeneratorPage() {
   }, []);
 
   const saveToHistory = (item: HistoryItem) => {
-    const next = [item, ...history].slice(0, 20);
-    setHistory(next);
-    try { localStorage.setItem("adonis_gen_history", JSON.stringify(next)); } catch {}
+    setHistory(prev => {
+      const next = [item, ...prev].slice(0, 20);
+      try { localStorage.setItem("adonis_gen_history", JSON.stringify(next)); } catch {}
+      return next;
+    });
   };
 
   const clearHistory = () => {
@@ -532,9 +534,9 @@ export default function GeneratorPage() {
                   </button>
                   <button
                     onClick={() => { setStreamText(""); setStreamDone(false); setViralScore(null); setViralAnalysis(null); try { localStorage.removeItem("adonis_last_result"); } catch {} }}
-                    className="text-xs text-slate-600 hover:text-red-400 transition-colors flex items-center gap-1"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/15 transition-colors"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="w-3.5 h-3.5" /> Очистить
                   </button>
                 </div>
               </div>
@@ -612,9 +614,9 @@ export default function GeneratorPage() {
                 </div>
                 <button
                   onClick={() => { setCarouselData(null); setSlideImages([]); setStreamDone(false); try { localStorage.removeItem("adonis_last_result"); } catch {} }}
-                  className="text-xs text-slate-600 hover:text-red-400 transition-colors flex items-center gap-1"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/15 transition-colors"
                 >
-                  <Trash2 className="w-3 h-3" /> Очистить
+                  <Trash2 className="w-3.5 h-3.5" /> Очистить
                 </button>
               </div>
 
