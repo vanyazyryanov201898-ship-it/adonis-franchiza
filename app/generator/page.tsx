@@ -6,7 +6,7 @@ import {
   Sparkles, Zap, Copy, RefreshCw, ChevronDown,
   Check, Flame, BookOpen, Video, MessageSquare, Hash, FileText,
   History, Trash2, AlertCircle, Download, ChevronLeft, ChevronRight,
-  LayoutGrid, Send,
+  LayoutGrid, Send, BarChart2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { pickImages } from "@/lib/carousel-images";
@@ -20,6 +20,7 @@ const contentTypes = [
   { id: "title",       label: "Заголовок", icon: Hash,         description: "Виральный заголовок" },
   { id: "description", label: "Описание",  icon: FileText,     description: "Описание под видео" },
   { id: "ideas",       label: "Идеи",      icon: BookOpen,     description: "5 идей для роликов" },
+  { id: "infographic", label: "Инфографика", icon: BarChart2,  description: "Сценарий под инфографику" },
 ];
 
 const topics = [

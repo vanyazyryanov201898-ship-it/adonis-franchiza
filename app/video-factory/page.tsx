@@ -7,8 +7,77 @@ import {
   Zap, Music, Type, Mic, Film, Settings2, Download,
   Eye, Sparkles, Waves,
   Calendar, Package, ChevronDown, ChevronUp,
+  User, Bot, BarChart2, Palette, Layers,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+
+const videoTypes = [
+  {
+    id: "avatar-real",
+    label: "Живой аватар",
+    icon: User,
+    color: "text-amber-400",
+    bg: "bg-amber-500/10",
+    border: "border-amber-500/30",
+    activeBorder: "border-amber-500/50",
+    description: "Реальный человек говорит в камеру",
+    api: "HeyGen",
+    apiColor: "text-amber-400",
+    soon: false,
+  },
+  {
+    id: "avatar-ai",
+    label: "ИИ аватар",
+    icon: Bot,
+    color: "text-violet-400",
+    bg: "bg-violet-500/10",
+    border: "border-violet-500/30",
+    activeBorder: "border-violet-500/50",
+    description: "AI-персонаж озвучивает сценарий",
+    api: "HeyGen",
+    apiColor: "text-violet-400",
+    soon: false,
+  },
+  {
+    id: "infographic",
+    label: "Инфографика",
+    icon: BarChart2,
+    color: "text-cyan-400",
+    bg: "bg-cyan-500/10",
+    border: "border-cyan-500/30",
+    activeBorder: "border-cyan-500/50",
+    description: "Факты и цифры в движении",
+    api: "Creatomate",
+    apiColor: "text-cyan-400",
+    soon: false,
+  },
+  {
+    id: "cartoon",
+    label: "Мультяшный",
+    icon: Palette,
+    color: "text-pink-400",
+    bg: "bg-pink-500/10",
+    border: "border-pink-500/30",
+    activeBorder: "border-pink-500/50",
+    description: "Анимация и иллюстрация",
+    api: "Kling 2.0",
+    apiColor: "text-pink-400",
+    soon: false,
+  },
+  {
+    id: "montage",
+    label: "Монтаж",
+    icon: Layers,
+    color: "text-blue-400",
+    bg: "bg-blue-500/10",
+    border: "border-blue-500/30",
+    activeBorder: "border-blue-500/50",
+    description: "Сборка из стоковых кадров",
+    api: "Pexels",
+    apiColor: "text-blue-400",
+    soon: false,
+  },
+];
 
 const voiceOptions = [
   { id: "alex", name: "Алекс", description: "Уверенный мужской", lang: "RU" },
@@ -43,6 +112,7 @@ interface VideoItem {
   viralScore: number;
   eta: string;
   views?: number;
+  type?: string;
 }
 
 const initialVideos: VideoItem[] = [
@@ -55,6 +125,7 @@ const initialVideos: VideoItem[] = [
     platform: ["TikTok", "Instagram"],
     viralScore: 91,
     eta: "2 мин",
+    type: "avatar-ai",
   },
   {
     id: 2,
@@ -65,6 +136,7 @@ const initialVideos: VideoItem[] = [
     platform: ["YouTube", "TikTok"],
     viralScore: 89,
     eta: "5 мин",
+    type: "infographic",
   },
   {
     id: 3,
@@ -75,6 +147,7 @@ const initialVideos: VideoItem[] = [
     platform: ["Instagram"],
     viralScore: 87,
     eta: "12 мин",
+    type: "montage",
   },
   {
     id: 4,
@@ -86,6 +159,7 @@ const initialVideos: VideoItem[] = [
     viralScore: 94,
     eta: "Готово",
     views: 128000,
+    type: "avatar-real",
   },
   {
     id: 5,
@@ -97,6 +171,7 @@ const initialVideos: VideoItem[] = [
     viralScore: 88,
     eta: "Готово",
     views: 89000,
+    type: "cartoon",
   },
   {
     id: 6,
@@ -108,6 +183,7 @@ const initialVideos: VideoItem[] = [
     viralScore: 92,
     eta: "Готово",
     views: 234000,
+    type: "infographic",
   },
 ];
 
@@ -158,6 +234,7 @@ export default function VideoFactoryPage() {
   const [selectedStyle, setSelectedStyle] = useState("viral");
   const [showNewForm, setShowNewForm] = useState(false);
   const [newVideoTitle, setNewVideoTitle] = useState("");
+  const [newVideoType, setNewVideoType] = useState("infographic");
   const [notification, setNotification] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -167,6 +244,7 @@ export default function VideoFactoryPage() {
 
   const handleCreateVideo = () => {
     if (!newVideoTitle.trim()) return;
+    const typeInfo = videoTypes.find((t) => t.id === newVideoType);
     const newVideo: VideoItem = {
       id: Date.now(),
       title: newVideoTitle.trim(),
@@ -176,11 +254,12 @@ export default function VideoFactoryPage() {
       platform: ["TikTok", "Instagram"],
       viralScore: 80 + Math.floor(Math.random() * 15),
       eta: "5 мин",
+      type: newVideoType,
     };
     setVideos((prev) => [newVideo, ...prev]);
     setNewVideoTitle("");
     setShowNewForm(false);
-    showToast("Ролик добавлен в очередь рендера!");
+    showToast(`${typeInfo?.label} добавлен в очередь рендера!`);
   };
 
   // AUTO-WAVE state
@@ -203,6 +282,7 @@ export default function VideoFactoryPage() {
     setTimeout(() => {
       setWaveLaunching(false);
       setWaveLaunched(true);
+      const types = ["avatar-ai", "infographic", "montage", "cartoon", "avatar-real"];
       const newVideos: VideoItem[] = Array.from({ length: waveCount }, (_, i) => ({
         id: Date.now() + i,
         title: [
@@ -222,6 +302,7 @@ export default function VideoFactoryPage() {
         ),
         viralScore: 80 + Math.floor(Math.random() * 15),
         eta: `${(i + 1) * 3} мин`,
+        type: types[i % types.length],
       }));
       setVideos((prev) => [...newVideos, ...prev]);
       setTimeout(() => setWaveLaunched(false), 4000);
@@ -231,7 +312,6 @@ export default function VideoFactoryPage() {
   const selectedPeriod = wavePeriods.find((p) => p.id === wavePeriod);
   const estimatedCost = (waveCount * 0.24).toFixed(2);
   const estimatedTime = `${Math.ceil(waveCount * 1.5)} мин`;
-
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -267,13 +347,66 @@ export default function VideoFactoryPage() {
           )}
         </AnimatePresence>
 
+        {/* Video Type Selector */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Film className="w-4 h-4 text-violet-400" />
+            <h3 className="text-sm font-semibold text-white">Тип видео</h3>
+            <span className="text-[11px] text-slate-500 ml-1">— выбери формат ролика</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {videoTypes.map((vt) => {
+              const Icon = vt.icon;
+              return (
+                <motion.button
+                  key={vt.id}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setNewVideoType(vt.id)}
+                  className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all text-center ${
+                    newVideoType === vt.id
+                      ? `${vt.bg} ${vt.activeBorder}`
+                      : "border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.04] hover:border-white/[0.1]"
+                  }`}
+                >
+                  {newVideoType === vt.id && (
+                    <motion.div
+                      layoutId="typeSelector"
+                      className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.08]"
+                    />
+                  )}
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    newVideoType === vt.id ? vt.bg : "bg-white/[0.04]"
+                  }`}>
+                    <Icon className={`w-5 h-5 ${newVideoType === vt.id ? vt.color : "text-slate-500"}`} />
+                  </div>
+                  <div>
+                    <div className={`text-xs font-semibold ${newVideoType === vt.id ? "text-white" : "text-slate-400"}`}>
+                      {vt.label}
+                    </div>
+                    <div className="text-[10px] text-slate-600 mt-0.5 leading-tight">{vt.description}</div>
+                  </div>
+                  <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-white/[0.04] ${
+                    newVideoType === vt.id ? vt.apiColor : "text-slate-600"
+                  }`}>
+                    {vt.api}
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        </motion.div>
+
         {/* AUTO-WAVE Block */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-900/15 to-blue-900/10 overflow-hidden"
         >
-          {/* Header */}
           <button
             onClick={() => setWaveOpen(!waveOpen)}
             className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/[0.02] transition-colors"
@@ -307,7 +440,6 @@ export default function VideoFactoryPage() {
             </div>
           </button>
 
-          {/* Body */}
           <AnimatePresence>
             {waveOpen && (
               <motion.div
@@ -319,8 +451,6 @@ export default function VideoFactoryPage() {
               >
                 <div className="px-5 pb-5 space-y-4 border-t border-white/[0.06]">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-
-                    {/* Period */}
                     <div>
                       <label className="text-xs text-slate-500 mb-2 block flex items-center gap-1.5">
                         <Calendar className="w-3 h-3" /> Период
@@ -342,7 +472,6 @@ export default function VideoFactoryPage() {
                       </div>
                     </div>
 
-                    {/* Content Type */}
                     <div>
                       <label className="text-xs text-slate-500 mb-2 block flex items-center gap-1.5">
                         <Package className="w-3 h-3" /> Тип контента
@@ -368,7 +497,6 @@ export default function VideoFactoryPage() {
                       </div>
                     </div>
 
-                    {/* Platforms + Count */}
                     <div className="space-y-3">
                       <div>
                         <label className="text-xs text-slate-500 mb-2 block">Платформы</label>
@@ -411,7 +539,6 @@ export default function VideoFactoryPage() {
                     </div>
                   </div>
 
-                  {/* Footer: Estimate + Launch */}
                   <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
                     <div className="flex items-center gap-5 text-xs text-slate-500">
                       <span>
@@ -592,14 +719,48 @@ export default function VideoFactoryPage() {
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 rounded-2xl border border-violet-500/25 bg-violet-500/[0.06] space-y-3">
+                  <div className="p-4 rounded-2xl border border-violet-500/25 bg-violet-500/[0.06] space-y-4">
                     <p className="text-xs font-semibold text-white">Новый ролик</p>
+
+                    {/* Type picker inside form */}
+                    <div>
+                      <p className="text-[11px] text-slate-500 mb-2">Формат</p>
+                      <div className="grid grid-cols-1 gap-1.5">
+                        {videoTypes.map((vt) => {
+                          const Icon = vt.icon;
+                          const isSelected = newVideoType === vt.id;
+                          return (
+                            <button
+                              key={vt.id}
+                              onClick={() => setNewVideoType(vt.id)}
+                              className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all text-left ${
+                                isSelected
+                                  ? `${vt.bg} ${vt.activeBorder}`
+                                  : "border-white/[0.06] hover:border-white/[0.12]"
+                              }`}
+                            >
+                              <Icon className={`w-4 h-4 flex-shrink-0 ${isSelected ? vt.color : "text-slate-600"}`} />
+                              <div className="flex-1 min-w-0">
+                                <span className={`text-xs font-medium ${isSelected ? "text-white" : "text-slate-400"}`}>
+                                  {vt.label}
+                                </span>
+                                <span className="text-[10px] text-slate-600 ml-2">{vt.description}</span>
+                              </div>
+                              <span className={`text-[9px] font-bold ${isSelected ? vt.apiColor : "text-slate-700"}`}>
+                                {vt.api}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     <input
                       type="text"
                       value={newVideoTitle}
                       onChange={(e) => setNewVideoTitle(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleCreateVideo()}
-                      placeholder="Название ролика..."
+                      placeholder="Тема или название ролика..."
                       className="w-full px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.1] text-sm text-white placeholder-slate-600 outline-none focus:border-violet-500/50 transition-colors"
                       autoFocus
                     />
@@ -645,6 +806,8 @@ export default function VideoFactoryPage() {
               {videos.map((video, index) => {
                 const config = statusConfig[video.status];
                 const isRendering = video.status === "rendering";
+                const typeInfo = videoTypes.find((t) => t.id === video.type);
+                const TypeIcon = typeInfo?.icon;
 
                 return (
                   <motion.div
@@ -659,7 +822,6 @@ export default function VideoFactoryPage() {
                         ? "border-emerald-500/15 bg-emerald-500/[0.03] hover:border-emerald-500/25"
                         : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
                     }`}
-                    onClick={() => {}}
                   >
                     <div className="flex items-start gap-4">
                       {/* Thumbnail */}
@@ -687,7 +849,13 @@ export default function VideoFactoryPage() {
                         </div>
 
                         {/* Meta */}
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          {typeInfo && TypeIcon && (
+                            <span className={`flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md ${typeInfo.bg} ${typeInfo.color}`}>
+                              <TypeIcon className="w-3 h-3" />
+                              {typeInfo.label}
+                            </span>
+                          )}
                           <span className="text-[11px] text-slate-500">{video.duration}</span>
                           <div className="flex gap-1">
                             {video.platform.map((p) => (
