@@ -14,6 +14,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Zap,
   Crown,
   Activity,
@@ -21,11 +22,30 @@ import {
   ScanSearch,
   Palette,
   Repeat2,
-  PieChart,
+  User,
+  Bot,
+  BarChart2,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+interface NavChild {
+  href: string;
+  label: string;
+  color: string;
+  icon: React.ElementType;
+}
+
+interface NavItem {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  badge: string | null;
+  color: string;
+  children?: NavChild[];
+}
+
+const navItems: NavItem[] = [
   {
     href: "/dashboard",
     icon: LayoutDashboard,
@@ -48,13 +68,6 @@ const navItems = [
     color: "text-purple-400",
   },
   {
-    href: "/infographics",
-    icon: PieChart,
-    label: "Инфографика",
-    badge: "New",
-    color: "text-cyan-400",
-  },
-  {
     href: "/repurpose",
     icon: Repeat2,
     label: "Репурпозинг",
@@ -64,9 +77,16 @@ const navItems = [
   {
     href: "/video-factory",
     icon: Video,
-    label: "Видео-фабрика",
-    badge: "3",
+    label: "Контент-завод",
+    badge: "5",
     color: "text-blue-400",
+    children: [
+      { href: "/video-factory/heygen-live", label: "HeyGen Живой",    color: "text-amber-400",  icon: User },
+      { href: "/video-factory/heygen-ai",   label: "HeyGen AI Аватар", color: "text-violet-400", icon: Bot },
+      { href: "/infographics",              label: "Инфографика",      color: "text-cyan-400",   icon: BarChart2 },
+      { href: "/video-factory/cartoon",     label: "Мультяшки",        color: "text-pink-400",   icon: Palette },
+      { href: "/video-factory/montage",     label: "Нарезка/Монтаж",   color: "text-blue-400",   icon: Layers },
+    ],
   },
   {
     href: "/autopost",
@@ -121,6 +141,8 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
+  const isVideoFactoryActive = pathname.startsWith("/video-factory") || pathname === "/infographics";
+
   return (
     <motion.aside
       initial={false}
@@ -128,7 +150,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
       transition={{ duration: 0.3, ease: "easeInOut" }}
       className={cn(
         "relative flex flex-col h-screen overflow-hidden flex-shrink-0",
-        // Mobile: fixed overlay, hidden by default
         "max-md:fixed max-md:left-0 max-md:top-0 max-md:z-50",
         !mobileOpen && "max-md:hidden"
       )}
@@ -145,7 +166,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
         "flex items-center gap-3 p-5 border-b border-[rgba(139,92,246,0.12)]",
         collapsed && "justify-center px-4"
       )}>
-        {/* Logo Icon */}
         <div className="relative flex-shrink-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center animate-glow-pulse">
             <Zap className="w-5 h-5 text-white" fill="currentColor" />
@@ -202,74 +222,133 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
       </AnimatePresence>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
+          const isParentActive = item.children
+            ? item.children.some((c) => pathname === c.href) || pathname === item.href
+            : false;
+          const showChildren = !collapsed && item.children && (isVideoFactoryActive);
           const Icon = item.icon;
 
           return (
-            <Link key={item.href} href={item.href} onClick={onMobileClose}>
-              <motion.div
-                whileHover={{ x: collapsed ? 0 : 4 }}
-                whileTap={{ scale: 0.98 }}
-                className={cn(
-                  "relative flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group",
-                  collapsed && "justify-center px-2",
-                  isActive
-                    ? "sidebar-active"
-                    : "hover:bg-white/[0.04]"
-                )}
-              >
-                {/* Active indicator */}
-                {isActive && (
-                  <motion.div
-                    layoutId="activeNav"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-violet-500 rounded-full"
-                  />
-                )}
-
-                <Icon
+            <div key={item.href}>
+              <Link href={item.href} onClick={onMobileClose}>
+                <motion.div
+                  whileHover={{ x: collapsed ? 0 : 4 }}
+                  whileTap={{ scale: 0.98 }}
                   className={cn(
-                    "w-[18px] h-[18px] flex-shrink-0 transition-colors",
-                    isActive ? item.color : "text-slate-500 group-hover:text-slate-400"
+                    "relative flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group",
+                    collapsed && "justify-center px-2",
+                    (isActive || (item.children && isParentActive))
+                      ? "sidebar-active"
+                      : "hover:bg-white/[0.04]"
                   )}
-                />
+                >
+                  {(isActive || (item.children && isParentActive)) && (
+                    <motion.div
+                      layoutId="activeNav"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-violet-500 rounded-full"
+                    />
+                  )}
 
-                <AnimatePresence>
-                  {!collapsed && (
+                  <Icon
+                    className={cn(
+                      "w-[18px] h-[18px] flex-shrink-0 transition-colors",
+                      (isActive || (item.children && isParentActive)) ? item.color : "text-slate-500 group-hover:text-slate-400"
+                    )}
+                  />
+
+                  <AnimatePresence>
+                    {!collapsed && (
+                      <motion.span
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className={cn(
+                          "text-sm font-medium flex-1 whitespace-nowrap",
+                          (isActive || (item.children && isParentActive)) ? "text-white" : "text-slate-400 group-hover:text-slate-300"
+                        )}
+                      >
+                        {item.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+
+                  {!collapsed && item.badge && (
                     <motion.span
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      transition={{ duration: 0.2 }}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
                       className={cn(
-                        "text-sm font-medium flex-1 whitespace-nowrap",
-                        isActive ? "text-white" : "text-slate-400 group-hover:text-slate-300"
+                        "px-1.5 py-0.5 text-[10px] font-bold rounded-md",
+                        item.badge === "Live"
+                          ? "bg-emerald-500/20 text-emerald-400 animate-pulse"
+                          : item.badge === "New"
+                          ? "bg-pink-500/20 text-pink-400"
+                          : "bg-violet-500/20 text-violet-400"
                       )}
                     >
-                      {item.label}
+                      {item.badge}
                     </motion.span>
                   )}
-                </AnimatePresence>
 
-                {!collapsed && item.badge && (
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className={cn(
-                      "px-1.5 py-0.5 text-[10px] font-bold rounded-md",
-                      item.badge === "Live"
-                        ? "bg-emerald-500/20 text-emerald-400 animate-pulse"
-                        : item.badge === "New"
-                        ? "bg-pink-500/20 text-pink-400"
-                        : "bg-violet-500/20 text-violet-400"
-                    )}
+                  {!collapsed && item.children && (
+                    <ChevronDown
+                      className={cn(
+                        "w-3.5 h-3.5 text-slate-500 transition-transform",
+                        showChildren && "rotate-180"
+                      )}
+                    />
+                  )}
+                </motion.div>
+              </Link>
+
+              {/* Sub-nav */}
+              <AnimatePresence>
+                {showChildren && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden ml-3 pl-3 border-l border-white/[0.06]"
                   >
-                    {item.badge}
-                  </motion.span>
+                    <div className="py-1 space-y-0.5">
+                      {item.children!.map((child) => {
+                        const isChildActive = pathname === child.href;
+                        const ChildIcon = child.icon;
+                        return (
+                          <Link key={child.href} href={child.href} onClick={onMobileClose}>
+                            <motion.div
+                              whileHover={{ x: 3 }}
+                              whileTap={{ scale: 0.98 }}
+                              className={cn(
+                                "flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-all group text-xs",
+                                isChildActive
+                                  ? "bg-white/[0.06] text-white"
+                                  : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]"
+                              )}
+                            >
+                              <ChildIcon
+                                className={cn(
+                                  "w-3.5 h-3.5 flex-shrink-0",
+                                  isChildActive ? child.color : "text-slate-600 group-hover:text-slate-400"
+                                )}
+                              />
+                              <span className="font-medium whitespace-nowrap">{child.label}</span>
+                              {isChildActive && (
+                                <div className={cn("ml-auto w-1 h-1 rounded-full", child.color.replace("text-", "bg-"))} />
+                              )}
+                            </motion.div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
                 )}
-              </motion.div>
-            </Link>
+              </AnimatePresence>
+            </div>
           );
         })}
       </nav>
