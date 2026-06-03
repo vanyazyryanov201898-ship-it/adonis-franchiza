@@ -7,7 +7,7 @@ import {
   Play, Loader2, CheckCircle2, Clock,
   Zap, Download, Eye, Film, Settings2,
   User, Bot, BarChart2, Palette, Layers,
-  ArrowRight, X, FileText,
+  ArrowRight,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 
@@ -126,87 +126,18 @@ const initialVideos: VideoItem[] = [
   { id: 6, title: "Бизнес с нуля за 3 месяца — мой путь",    status: "completed", progress: 100,duration: "0:55", platform: ["TikTok"],               viralScore: 92, eta: "Готово",  type: "infographic", views: 234000 },
 ];
 
-interface QueueItem {
-  id: number;
-  title: string;
-  direction: string;
-  platforms: string[];
-  script?: string;
-  status: VideoStatus;
-  progress: number;
-  viralScore: number;
-  duration: string;
-  addedAt: number;
-}
-
 export default function VideoFactoryPage() {
-  const [userQueue, setUserQueue] = useState<VideoItem[]>([]);
+  const [videos, setVideos] = useState<VideoItem[]>(initialVideos);
   const [notification, setNotification] = useState<string | null>(null);
-  const [scriptModal, setScriptModal] = useState<{ title: string; script: string } | null>(null);
 
   const showToast = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Load user queue from localStorage
-  useEffect(() => {
-    try {
-      const stored: QueueItem[] = JSON.parse(localStorage.getItem("adonis_queue") || "[]");
-      setUserQueue(stored.map((item) => ({
-        id: item.id,
-        title: item.title,
-        status: item.status,
-        progress: item.progress,
-        duration: item.duration,
-        platform: item.platforms || ["TikTok"],
-        viralScore: item.viralScore,
-        eta: item.status === "queued" ? "Скоро" : item.status === "rendering" ? "~2 мин" : "Готово",
-        type: item.direction,
-        script: item.script,
-      })));
-    } catch {}
-  }, []);
-
-  // Simulate progress for user queue items
   useEffect(() => {
     const interval = setInterval(() => {
-      setUserQueue((prev) => {
-        let changed = false;
-        const updated = prev.map((v) => {
-          if (v.status === "queued") {
-            changed = true;
-            return { ...v, status: "rendering" as VideoStatus, progress: 2, eta: "~2 мин" };
-          }
-          if (v.status === "rendering" && v.progress < 100) {
-            changed = true;
-            const np = Math.min(v.progress + Math.random() * 4 + 1, 100);
-            if (np >= 100) return { ...v, status: "completed" as VideoStatus, progress: 100, eta: "Готово" };
-            return { ...v, progress: np };
-          }
-          return v;
-        });
-        if (changed) {
-          try {
-            const stored: QueueItem[] = JSON.parse(localStorage.getItem("adonis_queue") || "[]");
-            const persisted = stored.map((s) => {
-              const match = updated.find((u) => u.id === s.id);
-              return match ? { ...s, status: match.status, progress: match.progress } : s;
-            });
-            localStorage.setItem("adonis_queue", JSON.stringify(persisted));
-          } catch {}
-        }
-        return updated;
-      });
-    }, 800);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Demo videos still animate
-  const [demoAnimated, setDemoAnimated] = useState<VideoItem[]>(initialVideos);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDemoAnimated((prev) =>
+      setVideos((prev) =>
         prev.map((v) => {
           if (v.status === "rendering" && v.progress < 99) {
             return { ...v, progress: Math.min(v.progress + Math.random() * 2, 99) };
@@ -218,9 +149,8 @@ export default function VideoFactoryPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const allVideos = [...userQueue, ...demoAnimated];
-  const totalRendering = allVideos.filter((v) => v.status === "rendering").length;
-  const totalCompleted = allVideos.filter((v) => v.status === "completed").length;
+  const totalRendering = videos.filter((v) => v.status === "rendering").length;
+  const totalCompleted = videos.filter((v) => v.status === "completed").length;
 
   return (
     <AppLayout title="Контент-завод" subtitle="Выбери направление и создай сценарий">
@@ -300,10 +230,10 @@ export default function VideoFactoryPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             {[
-              { label: "В рендере",  value: totalRendering,                                               icon: Loader2,      color: "text-violet-400", spin: true },
-              { label: "Готово",     value: totalCompleted,                                               icon: CheckCircle2, color: "text-emerald-400" },
-              { label: "В очереди",  value: allVideos.filter(v => v.status === "queued").length,          icon: Clock,        color: "text-slate-400" },
-              { label: "Всего",      value: allVideos.length,                                             icon: Film,         color: "text-blue-400" },
+              { label: "В рендере",  value: totalRendering,                                            icon: Loader2,      color: "text-violet-400", spin: true },
+              { label: "Готово",     value: totalCompleted,                                            icon: CheckCircle2, color: "text-emerald-400" },
+              { label: "В очереди",  value: videos.filter(v => v.status === "queued").length,          icon: Clock,        color: "text-slate-400" },
+              { label: "Всего",      value: videos.length,                                             icon: Film,         color: "text-blue-400" },
             ].map((stat) => (
               <div key={stat.label} className="p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center">
@@ -333,7 +263,7 @@ export default function VideoFactoryPage() {
               </button>
             </div>
 
-            {allVideos.map((video: VideoItem, index: number) => {
+            {videos.map((video, index) => {
               const config = statusConfig[video.status];
               const isRendering = video.status === "rendering";
               const dirInfo = directions.find((d) => d.id === video.type);
@@ -418,15 +348,11 @@ export default function VideoFactoryPage() {
 
                       {video.status === "completed" && (
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {(video as any).script && (
-                            <>
-                              <button onClick={(e) => { e.stopPropagation(); setScriptModal({ title: video.title, script: (video as any).script }); }}
-                                className="flex items-center gap-1 text-[11px] text-violet-400 hover:text-violet-300">
-                                <FileText className="w-2.5 h-2.5" /> Сценарий
-                              </button>
-                              <span className="text-slate-700">·</span>
-                            </>
-                          )}
+                          <button onClick={(e) => { e.stopPropagation(); showToast(`Просмотр: «${video.title.slice(0, 30)}...»`); }}
+                            className="flex items-center gap-1 text-[11px] text-violet-400 hover:text-violet-300">
+                            <Play className="w-2.5 h-2.5" /> Смотреть
+                          </button>
+                          <span className="text-slate-700">·</span>
                           <button onClick={(e) => { e.stopPropagation(); showToast("Видео скачивается..."); }}
                             className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300">
                             <Download className="w-2.5 h-2.5" /> Скачать
@@ -447,43 +373,6 @@ export default function VideoFactoryPage() {
         </div>
 
       </div>
-
-      {/* Script modal */}
-      <AnimatePresence>
-        {scriptModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-            onClick={() => setScriptModal(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl max-h-[80vh] rounded-2xl border border-white/[0.10] overflow-hidden"
-              style={{ background: "var(--bg-secondary)" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-violet-400" />
-                  <span className="text-sm font-semibold text-white truncate max-w-xs">{scriptModal.title}</span>
-                </div>
-                <button onClick={() => setScriptModal(null)} className="text-slate-500 hover:text-white transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-5 overflow-y-auto max-h-[60vh]">
-                <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans leading-relaxed">
-                  {scriptModal.script}
-                </pre>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </AppLayout>
   );
 }
