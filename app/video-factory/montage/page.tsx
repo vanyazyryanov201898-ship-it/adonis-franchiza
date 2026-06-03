@@ -93,7 +93,7 @@ export default function MontagePage() {
   }
 
   return (
-    <AppLayout>
+    <AppLayout title="Нарезка / Монтаж" subtitle="Монтажный бриф из готового материала">
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">

@@ -91,7 +91,7 @@ export default function HeyGenAIPage() {
   }
 
   return (
-    <AppLayout>
+    <AppLayout title="HeyGen AI Аватар" subtitle="Сценарий для AI-персонажа">
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
