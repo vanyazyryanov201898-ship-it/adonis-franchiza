@@ -92,7 +92,7 @@ export default function HeyGenLivePage() {
   }
 
   return (
-    <AppLayout title="HeyGen Живой" subtitle="Сценарий для живого видео">
+    <AppLayout>
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
