@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Sparkles, Copy, Check, RefreshCw, ChevronLeft, Flame } from "lucide-react";
+import { User, Sparkles, Copy, Check, RefreshCw, ChevronLeft, Flame, Video, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 
@@ -54,6 +54,30 @@ export default function HeyGenLivePage() {
   const [viralScore, setViralScore] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  const [addedToQueue, setAddedToQueue] = useState(false);
+
+  function extractTitle(text: string) {
+    const m = text.match(/«([^»]+)»/);
+    return m ? m[1] : topic.trim() || "HeyGen Живой ролик";
+  }
+
+  function addToQueue() {
+    const item = {
+      id: Date.now(),
+      title: extractTitle(result),
+      direction: "heygen-live",
+      platforms: [platform],
+      script: result,
+      status: "queued",
+      progress: 0,
+      viralScore: viralScore || 88,
+      duration: `~${duration}с`,
+      addedAt: Date.now(),
+    };
+    const existing = JSON.parse(localStorage.getItem("adonis_queue") || "[]");
+    localStorage.setItem("adonis_queue", JSON.stringify([item, ...existing.slice(0, 19)]));
+    setAddedToQueue(true);
+  }
 
   async function generate() {
     const finalTopic = topic.trim() || "Почему я выбрал мерч-бизнес";
@@ -61,6 +85,7 @@ export default function HeyGenLivePage() {
     setResult("");
     setViralScore(null);
     setError("");
+    setAddedToQueue(false);
 
     try {
       const res = await fetch("/api/generate", {
@@ -280,6 +305,23 @@ export default function HeyGenLivePage() {
                 <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans leading-relaxed">
                   {result}
                 </pre>
+                <div className="mt-4 pt-4 border-t border-white/[0.06] flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">Сценарий готов — отправь в очередь создания видео</p>
+                  {!addedToQueue ? (
+                    <button
+                      onClick={addToQueue}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-sm font-semibold transition-all flex-shrink-0"
+                    >
+                      <Video className="w-4 h-4" />
+                      Создать видео
+                    </button>
+                  ) : (
+                    <Link href="/video-factory" className="flex items-center gap-1.5 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors flex-shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Добавлено — смотреть очередь
+                    </Link>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
