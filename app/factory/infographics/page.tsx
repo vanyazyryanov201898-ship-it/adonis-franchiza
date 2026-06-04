@@ -408,22 +408,35 @@ function ScriptTab({
 
 // ─── Create Video Tab ─────────────────────────────────────────────────────────
 
+const MODELS = [
+  { id: "kling-3",  label: "Kling 3.0",  desc: "Быстро · ~6 кредитов" },
+  { id: "wan-2.7",  label: "Wan 2.7",    desc: "Анимация · ~10 кредитов" },
+  { id: "sora-2",   label: "Sora 2",     desc: "Качество · ~40 кредитов" },
+];
+
 type RenderState = "idle" | "submitting" | "polling" | "done" | "error";
 
 function CreateVideoTab({ infographicData }: { infographicData: InfographicData | null }) {
-  const [title, setTitle]         = useState("");
-  const [subText, setSubText]     = useState("");
+  const [prompt, setPrompt]       = useState("");
+  const [model, setModel]         = useState("kling-3");
   const [renderState, setRenderState] = useState<RenderState>("idle");
   const [videoUrl, setVideoUrl]   = useState<string | null>(null);
   const [progress, setProgress]   = useState(0);
   const [errorMsg, setErrorMsg]   = useState<string | null>(null);
   const pollRef                   = useRef<ReturnType<typeof setInterval> | null>(null);
-  const renderIdRef               = useRef<string | null>(null);
+  const genIdRef                  = useRef<string | null>(null);
 
   useEffect(() => {
     if (infographicData) {
-      setTitle(infographicData.title || "");
-      setSubText(infographicData.frames?.[0]?.text?.slice(0, 120) || "");
+      const frames = infographicData.frames || [];
+      const frameText = frames.slice(0, 4).map((f: InfographicFrame) =>
+        `Frame ${f.n}: ${f.heading}. ${f.stat ? f.stat + ". " : ""}${f.text}`
+      ).join(" ");
+      setPrompt(
+        `Animated infographic video: "${infographicData.title}". ${infographicData.subtitle}. ` +
+        `${frameText} Style: modern motion graphics, dark background, cyan accents, ` +
+        `smooth data animations, professional business infographic.`
+      );
     }
   }, [infographicData]);
 
@@ -432,40 +445,41 @@ function CreateVideoTab({ infographicData }: { infographicData: InfographicData 
   }, []);
 
   const startPolling = (id: string) => {
-    renderIdRef.current = id;
+    genIdRef.current = id;
     setRenderState("polling");
+    setProgress(5);
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/video-render?id=${id}`);
+        const res = await fetch(`/api/higgsfield/status/${id}`);
         const data = await res.json();
-        if (data.status === "succeeded" && data.url) {
+        if (data.status === "completed" && data.url) {
           clearInterval(pollRef.current!);
           setVideoUrl(data.url);
           setRenderState("done");
         } else if (data.status === "failed") {
           clearInterval(pollRef.current!);
-          setErrorMsg("Creatomate вернул ошибку рендера");
+          setErrorMsg(data.error || "Higgsfield вернул ошибку");
           setRenderState("error");
         } else {
-          setProgress(Math.round((data.progress || 0) * 100));
+          setProgress((p) => Math.min(p + 3, 90));
         }
       } catch {
-        // продолжаем поллинг при временной сетевой ошибке
+        // продолжаем поллинг
       }
-    }, 3000);
+    }, 4000);
   };
 
   const createVideo = async () => {
-    if (!title.trim()) return;
+    if (!prompt.trim()) return;
     setRenderState("submitting");
     setErrorMsg(null);
     setVideoUrl(null);
     setProgress(0);
     try {
-      const res = await fetch("/api/video-render", {
+      const res = await fetch("/api/higgsfield/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), hook: title.trim(), script: subText }),
+        body: JSON.stringify({ prompt: prompt.trim(), model, type: "infographic" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -490,58 +504,65 @@ function CreateVideoTab({ infographicData }: { infographicData: InfographicData 
 
   return (
     <div className="p-6 space-y-5">
-      <div>
-        <h3 className="text-sm font-semibold text-white mb-1">Создать видео через Creatomate</h3>
-        <p className="text-xs text-slate-500">Рендерит по шаблону — заголовок + текст. API ключ уже настроен.</p>
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
+          <Video className="w-5 h-5 text-cyan-400" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-white">Создать видео · Higgsfield AI</h3>
+          <p className="text-xs text-slate-500">Text-to-video генерация — промпт → MP4</p>
+        </div>
       </div>
 
-      {/* Prefill notice */}
       {infographicData && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-900/20 border border-cyan-500/20">
           <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-          <p className="text-xs text-cyan-300">Данные из сценарика подставлены — можешь изменить</p>
+          <p className="text-xs text-cyan-300">Промпт сформирован из сценария — можешь отредактировать</p>
         </div>
       )}
 
-      {/* Form */}
-      <div className="space-y-3">
-        <div>
-          <label className="text-xs font-medium text-slate-400 mb-1.5 block">Заголовок видео (Text-1)</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Рынок мерча в России 2024"
-            className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder-slate-600 outline-none focus:border-cyan-500/40 transition-colors"
-          />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-slate-400 mb-1.5 block">Подтекст / первый кадр (Text-2)</label>
-          <textarea
-            value={subText}
-            onChange={(e) => setSubText(e.target.value)}
-            rows={3}
-            placeholder="Короткий текст под заголовком..."
-            className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder-slate-600 outline-none focus:border-cyan-500/40 transition-colors resize-none"
-          />
+      {/* Model selector */}
+      <div>
+        <p className="text-xs font-medium text-slate-400 mb-2">Модель</p>
+        <div className="grid grid-cols-3 gap-2">
+          {MODELS.map((m) => (
+            <button key={m.id} onClick={() => setModel(m.id)}
+              className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
+                model === m.id
+                  ? "border-cyan-500/40 bg-cyan-500/10"
+                  : "border-white/[0.06] hover:border-white/[0.12]"
+              }`}>
+              <span className={`text-xs font-semibold ${model === m.id ? "text-white" : "text-slate-400"}`}>{m.label}</span>
+              <span className="text-[10px] text-slate-600 mt-0.5">{m.desc}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Action */}
+      {/* Prompt */}
+      <div>
+        <label className="text-xs font-medium text-slate-400 mb-1.5 block">Промпт для видео</label>
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={5}
+          placeholder="Опиши видео для Higgsfield — стиль, содержание, визуал..."
+          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder-slate-600 outline-none focus:border-cyan-500/40 transition-colors resize-none leading-relaxed"
+        />
+      </div>
+
       {renderState === "idle" && (
-        <button
-          onClick={createVideo}
-          disabled={!title.trim()}
-          className="w-full py-4 rounded-2xl btn-ai text-white font-semibold text-sm flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <button onClick={createVideo} disabled={!prompt.trim()}
+          className="w-full py-4 rounded-2xl btn-ai text-white font-semibold text-sm flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
           <Play className="w-5 h-5" />
-          Создать видео
+          Генерировать видео
         </button>
       )}
 
       {renderState === "submitting" && (
         <div className="w-full py-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center gap-3 text-sm text-slate-400">
           <Loader2 className="w-5 h-5 animate-spin" />
-          Отправляю в Creatomate...
+          Отправляю в Higgsfield...
         </div>
       )}
 
@@ -549,16 +570,13 @@ function CreateVideoTab({ infographicData }: { infographicData: InfographicData 
         <div className="p-5 rounded-2xl border border-cyan-500/20 bg-cyan-900/10 space-y-3">
           <div className="flex items-center gap-2">
             <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
-            <span className="text-sm text-white font-medium">Рендерим видео... {progress > 0 ? `${progress}%` : ""}</span>
+            <span className="text-sm text-white font-medium">Генерирую видео... {progress}%</span>
           </div>
           <div className="w-full h-2 rounded-full bg-white/[0.06]">
-            <motion.div
-              className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"
-              animate={{ width: `${Math.max(progress, 5)}%` }}
-              transition={{ duration: 0.5 }}
-            />
+            <motion.div className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"
+              animate={{ width: `${Math.max(progress, 5)}%` }} transition={{ duration: 0.8 }} />
           </div>
-          <p className="text-xs text-slate-500">Creatomate рендерит — обычно 30–90 секунд</p>
+          <p className="text-xs text-slate-500">Higgsfield AI рендерит — обычно 1–3 минуты</p>
         </div>
       )}
 
@@ -569,13 +587,13 @@ function CreateVideoTab({ infographicData }: { infographicData: InfographicData 
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
             <span className="text-sm text-white font-semibold">Видео готово!</span>
           </div>
+          <video src={videoUrl} controls className="w-full rounded-xl" />
           <a href={videoUrl} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-sm text-emerald-300 font-medium transition-all">
-            <ExternalLink className="w-4 h-4" />
-            Открыть видео
+            <ExternalLink className="w-4 h-4" /> Скачать / открыть
           </a>
           <button onClick={reset} className="w-full py-2 rounded-xl bg-white/[0.04] text-xs text-slate-500 hover:text-slate-300 transition-colors">
-            Создать ещё одно
+            Создать ещё
           </button>
         </motion.div>
       )}
@@ -584,7 +602,7 @@ function CreateVideoTab({ infographicData }: { infographicData: InfographicData 
         <div className="p-5 rounded-2xl border border-red-500/20 bg-red-500/5 space-y-3">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-red-400" />
-            <span className="text-sm text-white font-semibold">Ошибка рендера</span>
+            <span className="text-sm text-white font-semibold">Ошибка генерации</span>
           </div>
           <p className="text-sm text-red-400">{errorMsg}</p>
           <button onClick={reset} className="px-4 py-2 rounded-xl bg-white/[0.06] text-sm text-white hover:bg-white/[0.1] transition-colors">
