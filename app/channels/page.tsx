@@ -10,6 +10,13 @@ import {
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useToast } from "@/lib/toast-context";
+import { DIRECTION_DEFAULT_PLATFORMS } from "@/lib/platforms";
+import {
+  type Account,
+  getAccountsByPlatform,
+  addAccount,
+  removeAccount,
+} from "@/lib/accounts-store";
 
 const platforms = [
   {
@@ -176,6 +183,14 @@ function SkeletonPlatformCard() {
   );
 }
 
+const DIRECTION_LABELS: Record<string, string> = {
+  "heygen-live":  "HeyGen Живой",
+  "heygen-ai":    "HeyGen AI",
+  "infographics": "Инфографика",
+  "cartoon":      "Мультяшки",
+  "clips":        "Нарезка",
+};
+
 export default function ChannelsPage() {
   const router = useRouter();
   const [connecting, setConnecting] = useState<string | null>(null);
@@ -184,6 +199,43 @@ export default function ChannelsPage() {
   const [syncing, setSyncing] = useState(false);
   const [livePostCount, setLivePostCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Extra accounts (multi-account)
+  const [extraAccounts, setExtraAccounts] = useState<Record<string, Account[]>>({});
+  const [addFormPlatform, setAddFormPlatform] = useState<string | null>(null);
+  const [newAccName, setNewAccName] = useState("");
+  const [newAccHandle, setNewAccHandle] = useState("");
+  const [newAccDirection, setNewAccDirection] = useState<string>("null");
+
+  useEffect(() => {
+    const all: Record<string, Account[]> = {};
+    platforms.forEach((p) => { all[p.id] = getAccountsByPlatform(p.id); });
+    setExtraAccounts(all);
+  }, []);
+
+  const refreshAccounts = (platformId: string) => {
+    setExtraAccounts((prev) => ({ ...prev, [platformId]: getAccountsByPlatform(platformId) }));
+  };
+
+  const handleAddExtra = (platformId: string) => {
+    if (!newAccName.trim()) return;
+    addAccount({
+      platformId,
+      name: newAccName.trim(),
+      handle: newAccHandle.trim(),
+      directionId: newAccDirection === "null" ? null : newAccDirection,
+    });
+    setNewAccName("");
+    setNewAccHandle("");
+    setNewAccDirection("null");
+    setAddFormPlatform(null);
+    refreshAccounts(platformId);
+  };
+
+  const handleRemoveExtra = (id: string, platformId: string) => {
+    removeAccount(id);
+    refreshAccounts(platformId);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 700);
@@ -495,6 +547,91 @@ export default function ChannelsPage() {
                     )}
                   </motion.button>
                 )}
+
+                {/* Extra accounts (multi-account) */}
+                {(() => {
+                  const accs = extraAccounts[platform.id] || [];
+                  const isAddingHere = addFormPlatform === platform.id;
+                  return (
+                    <div className="mt-3 space-y-2">
+                      {accs.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] text-slate-600 uppercase tracking-widest font-semibold">Ещё аккаунты</p>
+                          {accs.map((acc) => (
+                            <div key={acc.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs text-white font-medium">{acc.name}</span>
+                                {acc.handle && <span className="text-[11px] text-slate-500 ml-1.5">{acc.handle}</span>}
+                                {acc.directionId && (
+                                  <span className="text-[9px] text-violet-400 ml-1.5 font-semibold">
+                                    {DIRECTION_LABELS[acc.directionId] ?? acc.directionId}
+                                  </span>
+                                )}
+                                {acc.directionId === null && (
+                                  <span className="text-[9px] text-slate-500 ml-1.5">все направления</span>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => handleRemoveExtra(acc.id, platform.id)}
+                                className="p-0.5 text-slate-600 hover:text-red-400 transition-colors"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {isAddingHere ? (
+                        <div className="p-3 rounded-xl border border-white/[0.08] bg-white/[0.02] space-y-2">
+                          <input
+                            value={newAccName} onChange={(e) => setNewAccName(e.target.value)}
+                            placeholder="Название (напр. ADONIS Инфографика)"
+                            className="w-full px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white placeholder-slate-600 outline-none focus:border-violet-500/40 transition-colors"
+                          />
+                          <input
+                            value={newAccHandle} onChange={(e) => setNewAccHandle(e.target.value)}
+                            placeholder="Хэндл (@name или URL)"
+                            className="w-full px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white placeholder-slate-600 outline-none focus:border-violet-500/40 transition-colors"
+                          />
+                          <select
+                            value={newAccDirection}
+                            onChange={(e) => setNewAccDirection(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white outline-none focus:border-violet-500/40 transition-colors"
+                          >
+                            <option value="null">Все направления</option>
+                            {Object.entries(DIRECTION_LABELS).map(([id, label]) => (
+                              <option key={id} value={id}>{label}</option>
+                            ))}
+                          </select>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleAddExtra(platform.id)}
+                              disabled={!newAccName.trim()}
+                              className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white bg-violet-600/80 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              Добавить
+                            </button>
+                            <button
+                              onClick={() => setAddFormPlatform(null)}
+                              className="px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-white bg-white/[0.05] transition-colors"
+                            >
+                              Отмена
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAddFormPlatform(platform.id)}
+                          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-white/[0.08] text-[11px] text-slate-600 hover:text-slate-400 hover:border-white/[0.15] transition-all"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Добавить ещё аккаунт
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </motion.div>
             );
           })}

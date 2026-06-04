@@ -12,14 +12,12 @@ import AppLayout from "@/components/layout/AppLayout";
 import { pickImages } from "@/lib/carousel-images";
 
 const contentTypes = [
-  { id: "scenario",    label: "Сценарий",    icon: Video,        description: "Полный сценарий ролика" },
-  { id: "hook",        label: "Хук",         icon: Zap,          description: "Цепляющее начало" },
-  { id: "post",        label: "Пост",        icon: Send,         description: "Готовый пост для соцсетей" },
-  { id: "carousel",   label: "Карусель",    icon: LayoutGrid,   description: "Слайды для Instagram" },
-  { id: "cta",         label: "CTA",         icon: MessageSquare,description: "Призыв к действию" },
-  { id: "title",       label: "Заголовок",   icon: Hash,         description: "Виральный заголовок" },
-  { id: "description", label: "Описание",    icon: FileText,     description: "Описание под видео" },
-  { id: "ideas",       label: "Идеи",        icon: BookOpen,     description: "5 идей для роликов" },
+  { id: "scenario",    label: "Сценарий",    icon: Video,         description: "Полный сценарий ролика" },
+  { id: "hook",        label: "Хук",         icon: Zap,           description: "Цепляющее начало" },
+  { id: "cta",         label: "CTA",         icon: MessageSquare, description: "Призыв к действию" },
+  { id: "title",       label: "Заголовок",   icon: Hash,          description: "Виральный заголовок" },
+  { id: "description", label: "Описание",    icon: FileText,      description: "Описание под видео" },
+  { id: "ideas",       label: "Идеи",        icon: BookOpen,      description: "5 идей для роликов" },
 ];
 
 const topics = [
@@ -394,6 +392,20 @@ export default function GeneratorPage() {
               </div>
             </div>
           </div>
+        </motion.div>
+
+        {/* ─── Баннер: посты/карусели переехали ───────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-emerald-500/20 bg-emerald-900/10"
+        >
+          <div className="text-xs text-slate-400 flex-1">
+            <span className="text-emerald-400 font-medium">Посты и Карусели</span> переехали в Контент-завод — теперь у них свой контент-план и автопостинг
+          </div>
+          <a href="/factory/posts" className="text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap transition-colors">Посты →</a>
+          <a href="/factory/carousels" className="text-xs text-orange-400 hover:text-orange-300 whitespace-nowrap transition-colors">Карусели →</a>
         </motion.div>
 
         {/* ─── Кнопка генерации ────────────────────────────── */}

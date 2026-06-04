@@ -1,701 +1,746 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Send, CheckCircle2, Clock, Zap, Plus, Link2,
-  BarChart2, Eye, Settings, Calendar, Loader2,
-  TrendingUp, Play, X, Sparkles, ChevronDown, ChevronUp, RefreshCw,
+  ChevronLeft, ChevronRight, Plus, X, Clock, Send,
+  Check, Trash2, CalendarDays, LayoutGrid, Star, TrendingUp,
+  Zap, BarChart2,
 } from "lucide-react";
+import {
+  format, startOfMonth, endOfMonth, eachDayOfInterval,
+  startOfWeek, endOfWeek, isToday, isSameMonth,
+  addMonths, subMonths, addDays, isSameDay,
+} from "date-fns";
+import { ru } from "date-fns/locale";
 import AppLayout from "@/components/layout/AppLayout";
-import { autopostSchedule } from "@/lib/mock-data";
+import { PLATFORMS } from "@/lib/platforms";
+import { getBestTimes, getHourPerformance, getTimeLabel, PLATFORM_BEST_TIMES } from "@/lib/best-times";
+import { cn } from "@/lib/utils";
 
-const platforms = [
-  {
-    id: "tiktok",
-    name: "TikTok",
-    icon: "T",
-    color: "#fe2c55",
-    followers: "12.4K",
-    connected: true,
-    posts: 487,
-    avgViews: "248K",
-  },
-  {
-    id: "instagram",
-    name: "Instagram",
-    icon: "In",
-    color: "#e91e8c",
-    followers: "8.9K",
-    connected: true,
-    posts: 312,
-    avgViews: "89K",
-  },
-  {
-    id: "youtube",
-    name: "YouTube Shorts",
-    icon: "Yt",
-    color: "#ff4444",
-    followers: "4.2K",
-    connected: true,
-    posts: 198,
-    avgViews: "45K",
-  },
-  {
-    id: "vk",
-    name: "VK Клипы",
-    icon: "VK",
-    color: "#0077ff",
-    followers: "3.1K",
-    connected: false,
-    posts: 134,
-    avgViews: "23K",
-  },
-  {
-    id: "telegram",
-    name: "Telegram",
-    icon: "Tg",
-    color: "#26a5e4",
-    followers: "2.8K",
-    connected: true,
-    posts: 116,
-    avgViews: "12K",
-  },
-  {
-    id: "rutube",
-    name: "Rutube",
-    icon: "Rt",
-    color: "#003087",
-    followers: "1.4K",
-    connected: false,
-    posts: 0,
-    avgViews: "0",
-  },
-  {
-    id: "yappy",
-    name: "Yappy",
-    icon: "Yp",
-    color: "#ff6600",
-    followers: "0",
-    connected: false,
-    posts: 0,
-    avgViews: "0",
-  },
-];
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const statusConfig = {
-  scheduled: { label: "Запланировано", icon: Clock, color: "text-blue-400", bg: "bg-blue-400/10" },
-  processing: { label: "Публикуется", icon: Loader2, color: "text-violet-400", bg: "bg-violet-400/10", spin: true },
-  draft: { label: "Черновик", icon: Settings, color: "text-slate-400", bg: "bg-slate-400/10" },
-  published: { label: "Опубликовано", icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-400/10" },
+export type CalendarPost = {
+  id: string;
+  directionId: string;
+  platformId: string;
+  topic: string;
+  scheduledDate: string;  // YYYY-MM-DD
+  scheduledTime: string;  // HH:MM
+  viralScore?: number;
+  status: "draft" | "scheduled" | "published";
+  views?: number;
 };
 
-const platformColors: Record<string, string> = {
-  TikTok: "#fe2c55",
-  Instagram: "#e91e8c",
-  YouTube: "#ff4444",
-  VK: "#0077ff",
-  Telegram: "#26a5e4",
-  Rutube: "#003087",
-  Yappy: "#ff6600",
+const STORAGE_KEY = "adonis_calendar_v1";
+
+const DIRECTIONS: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  "heygen-live":  { label: "HeyGen Живой",  color: "#f59e0b", bg: "bg-amber-500/20",  border: "border-amber-500/40" },
+  "heygen-ai":    { label: "HeyGen AI",      color: "#8b5cf6", bg: "bg-violet-500/20", border: "border-violet-500/40" },
+  "infographics": { label: "Инфографика",    color: "#06b6d4", bg: "bg-cyan-500/20",   border: "border-cyan-500/40" },
+  "cartoon":      { label: "Мультяшки",      color: "#ec4899", bg: "bg-pink-500/20",   border: "border-pink-500/40" },
+  "clips":        { label: "Нарезка",        color: "#3b82f6", bg: "bg-blue-500/20",   border: "border-blue-500/40" },
 };
 
-const bestTimes = [
-  { time: "09:00", score: 87, label: "Утро" },
-  { time: "12:00", score: 94, label: "Обед" },
-  { time: "17:00", score: 91, label: "Вечер" },
-  { time: "20:00", score: 96, label: "Прайм" },
-  { time: "22:00", score: 78, label: "Ночь" },
-];
+const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6..23
 
-export default function AutopostPage() {
-  const [activePlatforms, setActivePlatforms] = useState(["tiktok", "instagram", "youtube", "telegram"]);
-  const [showModal, setShowModal] = useState(false);
-  const [modalTitle, setModalTitle] = useState("");
-  const [modalPlatform, setModalPlatform] = useState("TikTok");
-  const [modalTime, setModalTime] = useState("12:00");
-  const [notification, setNotification] = useState<string | null>(null);
-  const [aiPilot, setAiPilot] = useState(true);
+function genId() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
-  // 30-day content plan
-  const [showPlanModal, setShowPlanModal] = useState(false);
-  const [planNiche, setPlanNiche] = useState("");
-  const [planFrequency, setPlanFrequency] = useState(5);
-  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
-  const [contentPlan, setContentPlan] = useState<Array<{day:number;weekday:string;platform:string;format:string;topic:string;hook:string;bestTime:string;viralScore:number}>>([]);
-  const [expandedWeeks, setExpandedWeeks] = useState<number[]>([1]);
+function pad(n: number) { return String(n).padStart(2, "0"); }
 
-  const generatePlan = async () => {
-    setIsGeneratingPlan(true);
-    try {
-      const res = await fetch("/api/content-plan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ niche: planNiche, platforms: activePlatforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)), frequency: planFrequency }),
-      });
-      const data = await res.json();
-      if (data.plan) { setContentPlan(data.plan); setShowPlanModal(false); setExpandedWeeks([1]); showToast(`Создан план на ${data.plan.length} публикаций!`); }
-    } catch { showToast("Ошибка генерации плана"); }
-    finally { setIsGeneratingPlan(false); }
+// ─── Storage ──────────────────────────────────────────────────────────────────
+
+function loadPosts(): CalendarPost[] {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
+  catch { return []; }
+}
+
+function savePosts(posts: CalendarPost[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+}
+
+function seedPosts(base: Date): CalendarPost[] {
+  const dirIds = Object.keys(DIRECTIONS);
+  const topics = [
+    "Окупился за 4.5 месяца — показываю цифры",
+    "Wildberries без товара — как это работает",
+    "31 млн выручки на студии брендирования",
+    "Бизнес из дома на печати: мой доход 300К",
+    "Кейс Сергея из Ставрополя: 10 млн за год",
+    "Рынок мерча 2024: цифры и тренды",
+    "Спартанец объясняет DTF печать за 60 сек",
+    "Почему мерч не умрёт никогда",
+    "3 причины уйти из найма прямо сейчас",
+    "Как открыть студию за 14 дней",
+    "Кейс: партнёр из Ростова заработал 16 млн",
+    "Франшиза vs бизнес с нуля — честно",
+  ];
+  const bestTimes: Record<string, string[]> = {
+    tiktok: ["17:00", "20:00"], instagram: ["18:00", "21:00"],
+    youtube: ["19:00", "17:00"], telegram: ["19:00", "12:00"], vk: ["20:00"],
   };
+  const platformIds = ["tiktok", "instagram", "youtube", "telegram", "vk"];
+  const posts: CalendarPost[] = [];
+  for (let i = 0; i < 12; i++) {
+    const date = addDays(base, i - 3);
+    const pid = platformIds[i % platformIds.length];
+    const times = bestTimes[pid] ?? ["19:00"];
+    posts.push({
+      id: genId(),
+      directionId: dirIds[i % dirIds.length],
+      platformId: pid,
+      topic: topics[i % topics.length],
+      scheduledDate: format(date, "yyyy-MM-dd"),
+      scheduledTime: times[i % times.length],
+      viralScore: Math.floor(Math.random() * 15) + 82,
+      status: date < base ? "published" : i % 4 === 0 ? "draft" : "scheduled",
+      views: date < base ? Math.floor(Math.random() * 80000) + 5000 : undefined,
+    });
+  }
+  return posts;
+}
 
-  const togglePlatform = (id: string) => {
-    setActivePlatforms((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    );
-  };
+// ─── Post card ────────────────────────────────────────────────────────────────
 
-  const showToast = (msg: string) => {
-    setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
-  };
-
-  const handleAddPost = () => {
-    if (!modalTitle.trim()) return;
-    setShowModal(false);
-    setModalTitle("");
-    showToast(`Публикация запланирована на ${modalTime} в ${modalPlatform}!`);
-  };
+function PostCard({
+  post, onDragStart, onClick, compact,
+}: {
+  post: CalendarPost;
+  onDragStart: (id: string) => void;
+  onClick: (post: CalendarPost) => void;
+  compact?: boolean;
+}) {
+  const dir = DIRECTIONS[post.directionId];
+  const platform = PLATFORMS.find((p) => p.id === post.platformId);
+  const perf = getHourPerformance(post.scheduledTime);
+  const isGood = perf >= 1.5;
 
   return (
-    <AppLayout title="Автопостинг" subtitle="Управление публикациями на всех платформах">
-      <div className="p-6 space-y-6">
-        {/* Toast */}
-        <AnimatePresence>
-          {notification && (
-            <motion.div
-              initial={{ opacity: 0, y: -16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-sm text-emerald-300 shadow-lg"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              {notification}
-            </motion.div>
-          )}
-        </AnimatePresence>
+    <div
+      draggable
+      onDragStart={(e) => { e.stopPropagation(); onDragStart(post.id); }}
+      onClick={(e) => { e.stopPropagation(); onClick(post); }}
+      className={cn(
+        "rounded-lg border cursor-grab active:cursor-grabbing select-none transition-all hover:scale-[1.02] hover:shadow-lg",
+        compact ? "px-1.5 py-1" : "px-2 py-1.5",
+        dir?.border ?? "border-white/20",
+        dir?.bg ?? "bg-white/10",
+        post.status === "published" && "opacity-60"
+      )}
+    >
+      <div className="flex items-center gap-1 min-w-0">
+        {platform && (
+          <span className="text-[8px] font-black w-4 h-4 rounded flex-shrink-0 flex items-center justify-center"
+            style={{ backgroundColor: platform.bgColor, color: platform.color }}>
+            {platform.shortLabel}
+          </span>
+        )}
+        <span className={cn("font-medium truncate flex-1", compact ? "text-[9px]" : "text-[10px]")}
+          style={{ color: dir?.color ?? "#94a3b8" }}>
+          {post.topic}
+        </span>
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {isGood && !compact && <Star className="w-2.5 h-2.5 text-amber-400" />}
+          <span className="text-[9px] text-slate-500">{post.scheduledTime}</span>
+        </div>
+      </div>
+      {post.status === "published" && post.views && !compact && (
+        <div className="text-[9px] text-emerald-400 mt-0.5">{(post.views / 1000).toFixed(0)}K просмотров</div>
+      )}
+    </div>
+  );
+}
 
-        {/* Modal */}
-        <AnimatePresence>
-          {showModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-              onClick={() => setShowModal(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.92, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.92, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md p-6 rounded-2xl border border-white/[0.1] bg-[#0e0e1f] shadow-2xl space-y-5"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                    <Send className="w-4 h-4 text-violet-400" />
-                    Новая публикация
-                  </h3>
-                  <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-white transition-colors">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+// ─── Edit modal ───────────────────────────────────────────────────────────────
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-slate-500 mb-1.5 block">Заголовок поста</label>
-                    <input
-                      type="text"
-                      value={modalTitle}
-                      onChange={(e) => setModalTitle(e.target.value)}
-                      placeholder="Как открыть бизнес за 30 дней..."
-                      className="w-full px-3 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.1] text-sm text-white placeholder-slate-600 outline-none focus:border-violet-500/50 transition-colors"
-                      autoFocus
-                    />
-                  </div>
+function EditModal({
+  post, onSave, onDelete, onClose,
+}: {
+  post: CalendarPost;
+  onSave: (p: CalendarPost) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
+}) {
+  const [topic, setTopic]           = useState(post.topic);
+  const [date, setDate]             = useState(post.scheduledDate);
+  const [time, setTime]             = useState(post.scheduledTime);
+  const [platformId, setPlatformId] = useState(post.platformId);
+  const [directionId, setDirectionId] = useState(post.directionId);
+  const [status, setStatus]         = useState(post.status);
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-slate-500 mb-1.5 block">Платформа</label>
-                      <select
-                        value={modalPlatform}
-                        onChange={(e) => setModalPlatform(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.1] text-sm text-white outline-none focus:border-violet-500/50 transition-colors"
-                      >
-                        {["TikTok", "Instagram", "YouTube", "Telegram", "VK", "Rutube", "Yappy"].map((p) => (
-                          <option key={p} value={p} className="bg-[#0e0e1f]">{p}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 mb-1.5 block">Время публикации</label>
-                      <input
-                        type="time"
-                        value={modalTime}
-                        onChange={(e) => setModalTime(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.1] text-sm text-white outline-none focus:border-violet-500/50 transition-colors"
-                      />
-                    </div>
-                  </div>
-                </div>
+  const dir = DIRECTIONS[directionId];
+  const perf = getHourPerformance(time);
+  const timeInfo = getTimeLabel(perf);
+  const bestTimes = getBestTimes(platformId).slice(0, 3);
 
-                <div className="flex gap-2 pt-1">
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleAddPost}
-                    disabled={!modalTitle.trim()}
-                    className="flex-1 py-2.5 rounded-xl btn-ai text-sm font-semibold text-white disabled:opacity-40 flex items-center justify-center gap-2"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Запланировать
-                  </motion.button>
-                  <button
-                    onClick={() => setShowModal(false)}
-                    className="px-4 py-2.5 rounded-xl bg-white/[0.05] text-sm text-slate-400 hover:text-white border border-white/[0.08] transition-colors"
-                  >
-                    Отмена
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md rounded-2xl border bg-[#0d0d1a] shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+        style={{ borderColor: (dir?.color ?? "#8b5cf6") + "40" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: dir?.color ?? "#8b5cf6" }} />
+            <span className="text-sm font-semibold text-white">{dir?.label ?? "Пост"}</span>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
+        </div>
 
-        {/* Platform Cards */}
+        {/* Topic */}
         <div>
-          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-            <Link2 className="w-4 h-4 text-violet-400" />
-            Подключённые платформы
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-[10px] font-semibold text-amber-400 tracking-wide">📊 ДЕМО</span>
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {platforms.map((platform, index) => (
-              <motion.div
-                key={platform.id}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.07 }}
-                onClick={() => togglePlatform(platform.id)}
-                className={`relative p-4 rounded-2xl border cursor-pointer transition-all duration-200 group ${
-                  activePlatforms.includes(platform.id)
-                    ? "border-opacity-40 bg-opacity-5"
-                    : "border-white/[0.06] bg-white/[0.02] opacity-60"
-                }`}
-                style={
-                  activePlatforms.includes(platform.id)
-                    ? {
-                        borderColor: `${platform.color}40`,
-                        background: `${platform.color}08`,
-                      }
-                    : {}
-                }
-              >
-                {/* Platform Icon */}
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white mb-3"
-                  style={{ backgroundColor: `${platform.color}25`, border: `1px solid ${platform.color}40` }}
-                >
-                  <span style={{ color: platform.color }}>{platform.icon}</span>
-                </div>
+          <label className="text-xs text-slate-500 mb-1 block">Тема</label>
+          <textarea value={topic} onChange={(e) => setTopic(e.target.value)} rows={2}
+            className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white outline-none focus:border-violet-500/40 transition-colors resize-none" />
+        </div>
 
-                <div className="text-xs font-semibold text-white mb-0.5">{platform.name}</div>
-                <div className="text-[10px] text-slate-500 mb-3">{platform.followers} подп.</div>
+        {/* Date + Time */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Дата</label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white outline-none focus:border-violet-500/40 transition-colors" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 flex items-center gap-1 block">
+              <Clock className="w-3 h-3" /> Время
+            </label>
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white outline-none focus:border-violet-500/40 transition-colors" />
+          </div>
+        </div>
 
-                {/* Stats */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-600">Постов</span>
-                    <span className="text-slate-400">{platform.posts}</span>
-                  </div>
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-600">Ср. охват</span>
-                    <span style={{ color: platform.color }}>{platform.avgViews}</span>
-                  </div>
-                </div>
+        {/* Time quality indicator */}
+        <div className={cn(
+          "flex items-center gap-2 px-3 py-2 rounded-xl border text-xs",
+          perf >= 1.7 ? "bg-emerald-900/20 border-emerald-500/25" :
+          perf >= 1.2 ? "bg-cyan-900/15 border-cyan-500/20" :
+          "bg-white/[0.03] border-white/[0.07]"
+        )}>
+          <Zap className={cn("w-3.5 h-3.5 flex-shrink-0", timeInfo.color)} />
+          <span className={timeInfo.color}>{timeInfo.label}</span>
+          <span className="text-slate-500 ml-auto">x{perf.toFixed(1)} охват</span>
+        </div>
 
-                {/* Connection status */}
-                <div className="mt-3 flex items-center gap-1.5">
-                  <div
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: platform.connected ? "#10b981" : "#64748b" }}
-                  />
-                  <span className="text-[10px] text-slate-500">
-                    {platform.connected ? "Подключено" : "Не подключено"}
-                  </span>
-                </div>
-
-                {!platform.connected && (
-                  <button
-                    className="absolute top-3 right-3 text-[10px] text-slate-500 hover:text-white transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    + Подключить
-                  </button>
-                )}
-              </motion.div>
+        {/* Best time recommendations */}
+        <div>
+          <p className="text-xs text-slate-500 mb-1.5">Лучшее время для {PLATFORMS.find(p=>p.id===platformId)?.label ?? platformId}:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {bestTimes.map((slot) => (
+              <button key={slot.time} onClick={() => setTime(slot.time)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-medium transition-all",
+                  time === slot.time
+                    ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                    : "bg-white/[0.04] border-white/[0.08] text-slate-400 hover:text-white hover:border-white/[0.18]"
+                )}>
+                {Array(slot.score).fill("★").join("")}
+                <span>{slot.time}</span>
+                <span className="text-slate-600">— {slot.label}</span>
+              </button>
             ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-          {/* Schedule */}
-          <div className="xl:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-blue-400" />
-                Расписание публикаций
-              </h3>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl btn-ai text-xs text-white"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Добавить публикацию
-              </motion.button>
-            </div>
-
-            {/* Schedule List */}
-            <div className="space-y-3">
-              {/* Today header */}
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-violet-400">Сегодня</span>
-                <div className="flex-1 h-px bg-white/[0.05]" />
-              </div>
-
-              {autopostSchedule
-                .filter((p) => p.date === "Сегодня")
-                .map((post, index) => {
-                  const config = statusConfig[post.status as keyof typeof statusConfig];
-                  const Icon = config.icon;
-
-                  return (
-                    <motion.div
-                      key={post.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.07 }}
-                      className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                        post.status === "processing"
-                          ? "border-violet-500/25 bg-violet-500/5"
-                          : post.status === "scheduled"
-                          ? "border-blue-500/20 bg-blue-500/5"
-                          : "border-white/[0.06] bg-white/[0.02]"
-                      }`}
-                    >
-                      {/* Time */}
-                      <div className="text-center w-12 flex-shrink-0">
-                        <div className="text-sm font-bold text-white">{post.time}</div>
-                      </div>
-
-                      <div className="w-px h-8 bg-white/[0.08]" />
-
-                      {/* Platform */}
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                        style={{
-                          color: platformColors[post.platform],
-                          backgroundColor: `${platformColors[post.platform]}15`,
-                          border: `1px solid ${platformColors[post.platform]}30`,
-                        }}
-                      >
-                        {post.platform.slice(0, 2)}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white truncate">{post.title}</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          {post.platform} · Автопостинг
-                        </p>
-                      </div>
-
-                      {/* Status */}
-                      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium flex-shrink-0 ${config.bg} ${config.color}`}>
-                        <Icon
-                          className={`w-3 h-3 ${(config as any).spin ? "animate-spin" : ""}`}
-                        />
-                        {config.label}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-
-              {/* Tomorrow header */}
-              <div className="flex items-center gap-3 mt-4">
-                <span className="text-xs font-semibold text-slate-500">Завтра</span>
-                <div className="flex-1 h-px bg-white/[0.05]" />
-              </div>
-
-              {autopostSchedule
-                .filter((p) => p.date === "Завтра")
-                .map((post, index) => {
-                  const config = statusConfig[post.status as keyof typeof statusConfig];
-                  const Icon = config.icon;
-
-                  return (
-                    <motion.div
-                      key={post.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 + index * 0.07 }}
-                      className="flex items-center gap-4 p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all cursor-pointer group"
-                    >
-                      <div className="text-center w-12 flex-shrink-0">
-                        <div className="text-sm font-bold text-white">{post.time}</div>
-                      </div>
-
-                      <div className="w-px h-8 bg-white/[0.08]" />
-
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                        style={{
-                          color: platformColors[post.platform],
-                          backgroundColor: `${platformColors[post.platform]}15`,
-                          border: `1px solid ${platformColors[post.platform]}30`,
-                        }}
-                      >
-                        {post.platform.slice(0, 2)}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white truncate">{post.title}</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          {post.platform} · Автопостинг
-                        </p>
-                      </div>
-
-                      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium flex-shrink-0 ${config.bg} ${config.color}`}>
-                        <Icon className="w-3 h-3" />
-                        {config.label}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-            </div>
-          </div>
-
-          {/* Right Panel */}
-          <div className="space-y-5">
-            {/* Best Times */}
-            <div className="p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-sm font-semibold text-white">Лучшее время</h3>
-                <span className="text-[10px] text-slate-500 ml-auto">AI рекомендует</span>
-              </div>
-              <div className="space-y-3">
-                {bestTimes.map((time, i) => (
-                  <div key={time.time} className="flex items-center gap-3">
-                    <div className="w-12 text-xs font-mono font-medium text-white">{time.time}</div>
-                    <div className="flex-1 h-2 rounded-full bg-white/[0.04] overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${time.score}%` }}
-                        transition={{ delay: 0.5 + i * 0.1, duration: 0.8 }}
-                        className="h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-500"
-                        style={{ opacity: time.score >= 90 ? 1 : 0.6 }}
-                      />
-                    </div>
-                    <div className="text-xs font-medium text-slate-400 w-6">{time.score}</div>
-                    <span className="text-[10px] text-slate-600 w-12">{time.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-              <div className="flex items-center gap-2 mb-4">
-                <BarChart2 className="w-4 h-4 text-blue-400" />
-                <h3 className="text-sm font-semibold text-white">Сегодня</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Запланировано", value: "6", color: "text-blue-400" },
-                  { label: "Опубликовано", value: "3", color: "text-emerald-400" },
-                  { label: "Охваты", value: "124K", color: "text-violet-400" },
-                  { label: "Лиды", value: "34", color: "text-orange-400" },
-                ].map((stat) => (
-                  <div key={stat.label} className="p-3 rounded-xl bg-white/[0.03]">
-                    <div className={`text-xl font-bold ${stat.color}`}>{stat.value}</div>
-                    <div className="text-[10px] text-slate-600 mt-0.5">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* AI Autopilot */}
-            <div className={`p-5 rounded-2xl border transition-all ${aiPilot ? "border-violet-500/20 bg-gradient-to-br from-violet-900/15 to-blue-900/10" : "border-white/[0.06] bg-white/[0.02]"}`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Zap className={`w-4 h-4 ${aiPilot ? "text-violet-400" : "text-slate-500"}`} />
-                  <h3 className="text-sm font-semibold text-white">AI Автопилот</h3>
-                </div>
-                <button
-                  onClick={() => { setAiPilot(!aiPilot); showToast(aiPilot ? "AI Автопилот выключен" : "AI Автопилот включён!"); }}
-                  className={`relative w-10 h-5 rounded-full transition-all duration-300 ${aiPilot ? "bg-violet-600" : "bg-white/[0.1]"}`}
-                >
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${aiPilot ? "left-5" : "left-0.5"}`} />
-                </button>
-              </div>
-              <p className="text-xs text-slate-500 mb-3">
-                AI сам выбирает лучшее время публикации и оптимизирует расписание
-              </p>
-              {aiPilot ? (
-                <div className="flex items-center gap-1.5 text-[11px] text-emerald-400">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Активен · Следующая публикация в 12:00
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                  Выключен · Расписание вручную
-                </div>
-              )}
-            </div>
+        {/* Platform */}
+        <div>
+          <label className="text-xs text-slate-500 mb-1.5 block">Платформа</label>
+          <div className="flex flex-wrap gap-1.5">
+            {PLATFORMS.map((p) => (
+              <button key={p.id} onClick={() => setPlatformId(p.id)}
+                className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all",
+                  platformId === p.id ? "text-white border-transparent" : "bg-white/[0.03] text-slate-500 border-white/[0.06] hover:text-slate-300")}
+                style={platformId === p.id ? { backgroundColor: p.bgColor, borderColor: p.color + "60" } : {}}>
+                {p.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* ─── 30-дневный AI Контент-план ─────────────────────── */}
-        <div className="p-6 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-900/10 to-blue-900/10">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center">
-                <Calendar className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-white">AI Контент-план на 30 дней</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {contentPlan.length > 0 ? `${contentPlan.length} публикаций сгенерировано` : "Claude составит полное расписание за 10 секунд"}
-                </p>
-              </div>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowPlanModal(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl btn-ai text-xs text-white font-semibold"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              {contentPlan.length > 0 ? "Перегенерировать" : "Создать план"}
-            </motion.button>
+        {/* Direction */}
+        <div>
+          <label className="text-xs text-slate-500 mb-1.5 block">Направление</label>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(DIRECTIONS).map(([id, d]) => (
+              <button key={id} onClick={() => setDirectionId(id)}
+                className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all",
+                  directionId === id ? "text-white" : "bg-white/[0.03] text-slate-500 border-white/[0.06] hover:text-slate-300")}
+                style={directionId === id ? { backgroundColor: d.color + "25", borderColor: d.color + "60", color: d.color } : {}}>
+                {d.label}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Plan items */}
-          {contentPlan.length > 0 && (
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map((week) => {
-                const weekItems = contentPlan.filter((_, i) => Math.ceil((i + 1) / Math.ceil(contentPlan.length / 4)) === week);
-                if (!weekItems.length) return null;
-                const isOpen = expandedWeeks.includes(week);
+        {/* Published analytics */}
+        {post.status === "published" && post.views && (
+          <div className="p-3 rounded-xl bg-emerald-900/15 border border-emerald-500/20 space-y-1">
+            <p className="text-xs font-semibold text-emerald-400">Результат публикации</p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div><div className="text-sm font-bold text-white">{(post.views / 1000).toFixed(0)}K</div><div className="text-[10px] text-slate-500">просмотров</div></div>
+              <div><div className="text-sm font-bold text-white">{post.viralScore ?? "—"}%</div><div className="text-[10px] text-slate-500">вирусность</div></div>
+              <div><div className={cn("text-sm font-bold", getTimeLabel(getHourPerformance(post.scheduledTime)).color)}>x{getHourPerformance(post.scheduledTime).toFixed(1)}</div><div className="text-[10px] text-slate-500">время</div></div>
+            </div>
+          </div>
+        )}
+
+        {/* Status */}
+        <div className="flex gap-2">
+          {(["draft", "scheduled", "published"] as const).map((s) => (
+            <button key={s} onClick={() => setStatus(s)}
+              className={cn("flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                status === s
+                  ? s === "published" ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                    : s === "scheduled" ? "bg-violet-500/20 border-violet-500/40 text-violet-300"
+                    : "bg-white/[0.08] border-white/[0.15] text-white"
+                  : "bg-white/[0.03] border-white/[0.06] text-slate-500 hover:text-slate-300")}>
+              {s === "draft" ? "Черновик" : s === "scheduled" ? "Запланирован" : "Опубликован"}
+            </button>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button onClick={() => onSave({ ...post, topic, scheduledDate: date, scheduledTime: time, platformId, directionId, status })}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600/80 hover:bg-violet-600 text-white text-sm font-semibold transition-colors">
+            <Check className="w-4 h-4" /> Сохранить
+          </button>
+          <button onClick={() => onDelete(post.id)}
+            className="px-4 py-2.5 rounded-xl border border-red-500/25 text-red-400 hover:bg-red-500/10 transition-colors">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Analytics panel ──────────────────────────────────────────────────────────
+
+function AnalyticsPanel({ posts }: { posts: CalendarPost[] }) {
+  const published = posts.filter((p) => p.status === "published" && p.views);
+  if (published.length === 0) return null;
+
+  // Best hour by avg views
+  const byHour: Record<number, number[]> = {};
+  published.forEach((p) => {
+    const h = parseInt(p.scheduledTime.split(":")[0]);
+    if (!byHour[h]) byHour[h] = [];
+    byHour[h].push(p.views!);
+  });
+  const hourStats = Object.entries(byHour).map(([h, views]) => ({
+    hour: parseInt(h),
+    avg: Math.round(views.reduce((a, b) => a + b, 0) / views.length),
+  })).sort((a, b) => b.avg - a.avg);
+
+  const bestHour = hourStats[0];
+  const totalViews = published.reduce((a, p) => a + (p.views ?? 0), 0);
+
+  // Best direction
+  const byDir: Record<string, number[]> = {};
+  published.forEach((p) => {
+    if (!byDir[p.directionId]) byDir[p.directionId] = [];
+    byDir[p.directionId].push(p.views!);
+  });
+  const bestDir = Object.entries(byDir)
+    .map(([id, views]) => ({ id, avg: views.reduce((a,b)=>a+b,0)/views.length }))
+    .sort((a,b) => b.avg - a.avg)[0];
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      className="p-5 rounded-2xl border border-violet-500/20 bg-gradient-to-r from-violet-900/15 to-blue-900/10 space-y-4">
+      <div className="flex items-center gap-2">
+        <TrendingUp className="w-4 h-4 text-violet-400" />
+        <h3 className="text-sm font-semibold text-white">Аналитика публикаций</h3>
+        <span className="text-[10px] text-slate-500 ml-auto">{published.length} видео проанализировано</span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="p-3 rounded-xl bg-white/[0.04] border border-white/[0.07] text-center">
+          <div className="text-base font-bold text-white">{(totalViews / 1000).toFixed(0)}K</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Всего просмотров</div>
+        </div>
+        {bestHour && (
+          <div className="p-3 rounded-xl bg-emerald-900/20 border border-emerald-500/25 text-center">
+            <div className="text-base font-bold text-emerald-400">{pad(bestHour.hour)}:00</div>
+            <div className="text-[10px] text-slate-500 mt-0.5">Лучший час</div>
+            <div className="text-[10px] text-emerald-500">{(bestHour.avg/1000).toFixed(0)}K avg</div>
+          </div>
+        )}
+        {bestDir && (
+          <div className="p-3 rounded-xl text-center"
+            style={{ backgroundColor: (DIRECTIONS[bestDir.id]?.color ?? "#8b5cf6") + "15",
+                     borderWidth: 1, borderStyle: "solid",
+                     borderColor: (DIRECTIONS[bestDir.id]?.color ?? "#8b5cf6") + "30" }}>
+            <div className="text-base font-bold" style={{ color: DIRECTIONS[bestDir.id]?.color ?? "#fff" }}>
+              {DIRECTIONS[bestDir.id]?.label.split(" ")[0] ?? "—"}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-0.5">Лучшее направление</div>
+          </div>
+        )}
+      </div>
+
+      {/* Hour chart */}
+      {hourStats.length > 0 && (
+        <div>
+          <p className="text-[10px] text-slate-500 mb-2">Просмотры по времени публикации:</p>
+          <div className="flex items-end gap-1 h-12">
+            {HOURS.filter(h => byHour[h]).map((h) => {
+              const avg = byHour[h] ? byHour[h].reduce((a,b)=>a+b,0)/byHour[h].length : 0;
+              const max = Math.max(...hourStats.map(s=>s.avg));
+              const heightPct = max > 0 ? (avg / max) * 100 : 0;
+              const isBest = bestHour?.hour === h;
+              return (
+                <div key={h} className="flex flex-col items-center gap-0.5 flex-1">
+                  <div className={cn("w-full rounded-sm transition-all", isBest ? "bg-emerald-400" : "bg-violet-500/40")}
+                    style={{ height: `${heightPct}%` }} />
+                  <span className="text-[8px] text-slate-600">{h}</span>
+                </div>
+              );
+            })}
+          </div>
+          {bestHour && (
+            <p className="text-xs text-emerald-400 mt-2">
+              💡 Рекомендуем публиковать в <strong>{pad(bestHour.hour)}:00</strong> — в среднем {(bestHour.avg/1000).toFixed(0)}K просмотров
+            </p>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+type ViewMode = "month" | "week";
+
+export default function AutopostPage() {
+  const [currentDate, setCurrentDate]   = useState(new Date());
+  const [posts, setPosts]               = useState<CalendarPost[]>([]);
+  const [viewMode, setViewMode]         = useState<ViewMode>("week");
+  const [dragId, setDragId]             = useState<string | null>(null);
+  const [dropTarget, setDropTarget]     = useState<string | null>(null); // "YYYY-MM-DD|HH:MM"
+  const [editPost, setEditPost]         = useState<CalendarPost | null>(null);
+  const weekScrollRef                   = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const stored = loadPosts();
+    if (stored.length === 0) {
+      const seeded = seedPosts(new Date());
+      savePosts(seeded);
+      setPosts(seeded);
+    } else {
+      setPosts(stored);
+    }
+  }, []);
+
+  // Scroll week view to 8:00 on mount
+  useEffect(() => {
+    if (viewMode === "week" && weekScrollRef.current) {
+      weekScrollRef.current.scrollTop = 2 * 56; // 2 hours offset (start at 8:00)
+    }
+  }, [viewMode]);
+
+  const save = useCallback((updated: CalendarPost[]) => {
+    setPosts(updated);
+    savePosts(updated);
+  }, []);
+
+  const handleSaveEdit = (updated: CalendarPost) => {
+    save(posts.map((p) => (p.id === updated.id ? updated : p)));
+    setEditPost(null);
+  };
+
+  const handleDelete = (id: string) => {
+    save(posts.filter((p) => p.id !== id));
+    setEditPost(null);
+  };
+
+  const handleAddPost = (dateStr: string, timeStr = "12:00") => {
+    const np: CalendarPost = {
+      id: genId(), directionId: "infographics", platformId: "tiktok",
+      topic: "Новый пост", scheduledDate: dateStr, scheduledTime: timeStr, status: "draft",
+    };
+    save([...posts, np]);
+    setEditPost(np);
+  };
+
+  const handleDrop = (key: string) => {
+    if (!dragId) return;
+    const [dateStr, timeStr] = key.split("|");
+    save(posts.map((p) => p.id === dragId ? { ...p, scheduledDate: dateStr, scheduledTime: timeStr ?? p.scheduledTime } : p));
+    setDragId(null);
+    setDropTarget(null);
+  };
+
+  // Calendar helpers
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd   = endOfMonth(currentDate);
+  const calDays    = eachDayOfInterval({
+    start: startOfWeek(monthStart, { weekStartsOn: 1 }),
+    end:   endOfWeek(monthEnd, { weekStartsOn: 1 }),
+  });
+  const weekStart  = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const weekDays   = eachDayOfInterval({ start: weekStart, end: addDays(weekStart, 6) });
+
+  const getPostsForDay = (day: Date) =>
+    posts.filter((p) => p.scheduledDate === format(day, "yyyy-MM-dd"))
+         .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
+
+  const getPostsAtSlot = (day: Date, hour: number) =>
+    posts.filter((p) => {
+      if (p.scheduledDate !== format(day, "yyyy-MM-dd")) return false;
+      const h = parseInt(p.scheduledTime.split(":")[0]);
+      return h === hour;
+    });
+
+  const totalScheduled  = posts.filter((p) => p.status === "scheduled").length;
+  const totalPublished  = posts.filter((p) => p.status === "published").length;
+  const totalPlatforms  = new Set(posts.map((p) => p.platformId)).size;
+
+  const DAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+  return (
+    <AppLayout title="Автопостинг" subtitle="Единый календарь — все направления, все платформы">
+      <div className="p-6 space-y-5">
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Запланировано", value: totalScheduled, color: "text-violet-400" },
+            { label: "Опубликовано",  value: totalPublished, color: "text-emerald-400" },
+            { label: "Платформ",      value: totalPlatforms, color: "text-cyan-400" },
+          ].map((s) => (
+            <div key={s.label} className="p-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] text-center">
+              <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
+              <div className="text-[11px] text-slate-500">{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Direction legend */}
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(DIRECTIONS).map(([id, d]) => (
+            <div key={id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
+              <span className="text-[10px] text-slate-400 font-medium">{d.label}</span>
+              <span className="text-[10px] text-slate-600">{posts.filter((p) => p.directionId === id).length}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setCurrentDate(viewMode === "month" ? subMonths(currentDate, 1) : addDays(currentDate, -7))}
+              className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white transition-all">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <h3 className="text-sm font-semibold text-white capitalize min-w-[200px] text-center">
+              {viewMode === "month"
+                ? format(currentDate, "LLLL yyyy", { locale: ru })
+                : `${format(weekStart, "d MMM", { locale: ru })} — ${format(addDays(weekStart, 6), "d MMM yyyy", { locale: ru })}`}
+            </h3>
+            <button onClick={() => setCurrentDate(viewMode === "month" ? addMonths(currentDate, 1) : addDays(currentDate, 7))}
+              className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white transition-all">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button onClick={() => setCurrentDate(new Date())}
+              className="px-3 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-slate-400 hover:text-white transition-all">
+              Сегодня
+            </button>
+          </div>
+          <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <button onClick={() => setViewMode("month")}
+              className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                viewMode === "month" ? "bg-white/[0.08] text-white" : "text-slate-500 hover:text-slate-300")}>
+              <LayoutGrid className="w-3.5 h-3.5" /> Месяц
+            </button>
+            <button onClick={() => setViewMode("week")}
+              className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                viewMode === "week" ? "bg-white/[0.08] text-white" : "text-slate-500 hover:text-slate-300")}>
+              <CalendarDays className="w-3.5 h-3.5" /> Неделя
+            </button>
+          </div>
+        </div>
+
+        {/* ─── MONTH VIEW ─────────────────────────────── */}
+        {viewMode === "month" && (
+          <div className="rounded-2xl border border-white/[0.07] overflow-hidden">
+            <div className="grid grid-cols-7 border-b border-white/[0.07]">
+              {DAY_NAMES.map((d) => (
+                <div key={d} className="py-2 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7">
+              {calDays.map((day) => {
+                const dateStr = format(day, "yyyy-MM-dd");
+                const dayPosts = getPostsForDay(day);
+                const isCurrentMonth = isSameMonth(day, currentDate);
+                const isTodayDay = isToday(day);
+                const isDropHere = dropTarget?.startsWith(dateStr) ?? false;
+
                 return (
-                  <div key={week} className="rounded-xl border border-white/[0.06] overflow-hidden">
-                    <button
-                      onClick={() => setExpandedWeeks(prev => isOpen ? prev.filter(w => w !== week) : [...prev, week])}
-                      className="w-full flex items-center justify-between p-3 hover:bg-white/[0.02] transition-colors"
-                    >
-                      <span className="text-xs font-semibold text-white">Неделя {week}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-slate-500">{weekItems.length} постов</span>
-                        {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-slate-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
-                      </div>
-                    </button>
-                    {isOpen && (
-                      <div className="divide-y divide-white/[0.04]">
-                        {weekItems.map((item, i) => (
-                          <div key={i} className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/[0.02] transition-colors">
-                            <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
-                              <span className="text-[10px] font-bold text-slate-400">{item.day}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-white truncate font-medium">{item.topic}</p>
-                              <p className="text-[10px] text-slate-500 mt-0.5 truncate">{item.hook}</p>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/[0.05] text-slate-400">{item.platform}</span>
-                              <span className="text-[10px] text-slate-600">{item.bestTime}</span>
-                              <span className="text-[10px] font-bold text-emerald-400">{item.viralScore}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  <div key={dateStr}
+                    onDragOver={(e) => { e.preventDefault(); setDropTarget(dateStr + "|12:00"); }}
+                    onDragLeave={() => setDropTarget(null)}
+                    onDrop={() => handleDrop(dateStr + "|12:00")}
+                    className={cn(
+                      "min-h-[90px] p-1.5 border-b border-r border-white/[0.05] transition-colors group",
+                      !isCurrentMonth && "opacity-40",
+                      isDropHere && "bg-violet-500/10",
+                      isTodayDay && "bg-white/[0.03]"
+                    )}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={cn("text-[11px] font-semibold w-5 h-5 flex items-center justify-center rounded-full",
+                        isTodayDay ? "bg-violet-500 text-white" : isCurrentMonth ? "text-slate-400" : "text-slate-700")}>
+                        {format(day, "d")}
+                      </span>
+                      <button onClick={() => handleAddPost(dateStr)}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-slate-600 hover:text-violet-400 hover:bg-violet-500/15 transition-all">
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="space-y-0.5">
+                      {dayPosts.slice(0, 3).map((p) => (
+                        <PostCard key={p.id} post={p} onDragStart={setDragId} onClick={setEditPost} compact />
+                      ))}
+                      {dayPosts.length > 3 && (
+                        <div className="text-[9px] text-slate-600 pl-1">+{dayPosts.length - 3} ещё</div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* ─── Plan Modal ─────────────────────────────────────────── */}
-        <AnimatePresence>
-          {showPlanModal && (
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-              onClick={() => setShowPlanModal(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.93, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.93, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md p-6 rounded-2xl border border-white/[0.1] bg-[#0e0e1f] shadow-2xl space-y-5"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-400" />
-                    AI Контент-план
-                  </h3>
-                  <button onClick={() => setShowPlanModal(false)} className="text-slate-500 hover:text-white">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-slate-500 mb-1.5 block">Акцент / ниша</label>
-                    <input
-                      type="text"
-                      value={planNiche}
-                      onChange={(e) => setPlanNiche(e.target.value)}
-                      placeholder="Например: уход из найма, заработок 300К, бизнес с нуля..."
-                      className="w-full px-3 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.1] text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500 mb-2 block">Постов в неделю: <span className="text-white font-semibold">{planFrequency}</span></label>
-                    <input
-                      type="range" min={3} max={7} value={planFrequency}
-                      onChange={(e) => setPlanFrequency(Number(e.target.value))}
-                      className="w-full accent-emerald-500"
-                    />
-                    <div className="flex justify-between text-[10px] text-slate-600 mt-1">
-                      <span>3 / нед</span><span>5 / нед</span><span>7 / нед</span>
+        {/* ─── WEEK VIEW (time-grid) ───────────────────── */}
+        {viewMode === "week" && (
+          <div className="rounded-2xl border border-white/[0.07] overflow-hidden flex flex-col">
+            {/* Day header */}
+            <div className="grid border-b border-white/[0.07]" style={{ gridTemplateColumns: "48px repeat(7, 1fr)" }}>
+              <div className="border-r border-white/[0.05]" />
+              {weekDays.map((day) => {
+                const isTodayDay = isToday(day);
+                return (
+                  <div key={day.toISOString()}
+                    className={cn("py-3 text-center border-r border-white/[0.05] last:border-r-0", isTodayDay && "bg-violet-500/10")}>
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wider capitalize">
+                      {format(day, "EEE", { locale: ru })}
                     </div>
+                    <div className={cn("text-sm font-bold mt-0.5", isTodayDay ? "text-violet-400" : "text-white")}>
+                      {format(day, "d")}
+                    </div>
+                    <div className="text-[9px] text-slate-600 mt-0.5">{getPostsForDay(day).length} постов</div>
                   </div>
-                </div>
+                );
+              })}
+            </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  onClick={generatePlan}
-                  disabled={isGeneratingPlan}
-                  className="w-full py-3 rounded-xl btn-ai text-sm text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  {isGeneratingPlan ? (
-                    <><RefreshCw className="w-4 h-4 animate-spin" /> Генерирую план...</>
-                  ) : (
-                    <><Sparkles className="w-4 h-4" /> Создать план на 30 дней</>
-                  )}
-                </motion.button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            {/* Time grid — scrollable */}
+            <div ref={weekScrollRef} className="overflow-y-auto" style={{ maxHeight: 520 }}>
+              <div style={{ gridTemplateColumns: "48px repeat(7, 1fr)", display: "grid" }}>
+                {HOURS.map((hour) => {
+                  const isWorkHour = hour >= 9 && hour <= 22;
+                  const isPrime    = hour === 17 || hour === 19 || hour === 20;
+                  return (
+                    <>
+                      {/* Hour label */}
+                      <div key={`label-${hour}`}
+                        className={cn(
+                          "flex items-start justify-center pt-1.5 border-r border-b border-white/[0.05] text-[10px] font-mono flex-shrink-0",
+                          isPrime ? "text-amber-500/70" : "text-slate-600"
+                        )}
+                        style={{ height: 56 }}>
+                        {pad(hour)}
+                      </div>
 
+                      {/* Day cells for this hour */}
+                      {weekDays.map((day) => {
+                        const dateStr = format(day, "yyyy-MM-dd");
+                        const timeStr = `${pad(hour)}:00`;
+                        const cellKey = `${dateStr}|${timeStr}`;
+                        const slotPosts = getPostsAtSlot(day, hour);
+                        const isDropHere = dropTarget === cellKey;
+                        const isTodayDay = isToday(day);
+                        const perf = getHourPerformance(timeStr);
+                        const isGoodSlot = perf >= 1.5;
+
+                        return (
+                          <div key={cellKey}
+                            onDragOver={(e) => { e.preventDefault(); setDropTarget(cellKey); }}
+                            onDragLeave={() => setDropTarget(null)}
+                            onDrop={() => handleDrop(cellKey)}
+                            onClick={() => slotPosts.length === 0 && handleAddPost(dateStr, timeStr)}
+                            className={cn(
+                              "relative border-r border-b border-white/[0.04] last:border-r-0 transition-colors cursor-pointer group",
+                              isTodayDay && "bg-white/[0.01]",
+                              isDropHere && "bg-violet-500/15 border-violet-500/30",
+                              !isDropHere && isGoodSlot && isWorkHour && slotPosts.length === 0 && "hover:bg-emerald-500/5",
+                              !isDropHere && !isGoodSlot && slotPosts.length === 0 && "hover:bg-white/[0.02]"
+                            )}
+                            style={{ height: 56 }}>
+
+                            {/* Best time glow indicator */}
+                            {isGoodSlot && slotPosts.length === 0 && (
+                              <div className="absolute left-0 top-0 bottom-0 w-0.5"
+                                style={{ backgroundColor: "#10b98120" }} />
+                            )}
+
+                            {/* Posts in this slot */}
+                            <div className="p-1 space-y-0.5 h-full overflow-hidden">
+                              {slotPosts.map((p) => (
+                                <PostCard key={p.id} post={p} onDragStart={setDragId} onClick={setEditPost} compact />
+                              ))}
+                              {slotPosts.length === 0 && (
+                                <div className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Plus className="w-3 h-3 text-slate-600" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Best time legend */}
+            <div className="px-4 py-2.5 border-t border-white/[0.05] flex items-center gap-4 text-[10px] text-slate-600">
+              <span className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-amber-500/60" /> янтарный час = топ-время
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Star className="w-3 h-3 text-amber-400" /> звезда = отличное время
+              </span>
+              <span>Перетащи карточку на нужный час · Клик по ячейке = новый пост</span>
+            </div>
+          </div>
+        )}
+
+        {/* Analytics */}
+        <AnalyticsPanel posts={posts} />
+
+        <p className="text-xs text-slate-600 text-center">
+          Перетаскивай карточки между ячейками · Клик = редактировать дату, время, платформу
+        </p>
       </div>
+
+      <AnimatePresence>
+        {editPost && (
+          <EditModal post={editPost} onSave={handleSaveEdit} onDelete={handleDelete} onClose={() => setEditPost(null)} />
+        )}
+      </AnimatePresence>
     </AppLayout>
   );
 }

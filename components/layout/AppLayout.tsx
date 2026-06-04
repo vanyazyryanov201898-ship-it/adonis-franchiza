@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import GenerationIndicator from "@/components/GenerationIndicator";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -35,6 +36,7 @@ export default function AppLayout({ children, title, subtitle }: AppLayoutProps)
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
+        <GenerationIndicator />
       </div>
     </div>
   );
