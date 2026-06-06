@@ -9,7 +9,7 @@ import {
   BarChart2, Copy, Check, RefreshCw,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import { trendingTopics as mockTopics } from "@/lib/mock-data";
+import { trendingTopics as mockTopics } from "@/lib/data/mock-data";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";

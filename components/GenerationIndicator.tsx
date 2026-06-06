@@ -3,7 +3,7 @@
 import { useEffect, useReducer } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
-import { bgStore, type BgTask } from "@/lib/bg-store";
+import { bgStore, type BgTask } from "@/lib/stores/bg-store";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 

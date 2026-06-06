@@ -1,19 +1,23 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
+import { getGoogleAccessToken } from "@/lib/google-client";
 
-const API_KEY = process.env.HIGGSFIELD_API_KEY;
-const BASE_URL = "https://api.higgsfield.ai";
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT;
+const LOCATION = "us-central1";
+const VEO_MODEL = "veo-002";
 
 export async function POST(req: NextRequest) {
-  if (!API_KEY) {
-    return NextResponse.json({ error: "HIGGSFIELD_API_KEY not configured" }, { status: 500 });
+  if (!PROJECT_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    return NextResponse.json({ error: "Google Cloud не настроен (GOOGLE_CLOUD_PROJECT / GOOGLE_SERVICE_ACCOUNT_JSON)" }, { status: 500 });
   }
 
-  const { prompt, model = "kling-3", type } = await req.json() as {
+  const { prompt, aspect_ratio = "9:16", duration = 8 } = await req.json() as {
     prompt: string;
     model?: string;
-    type?: "infographic" | "cartoon";
+    aspect_ratio?: string;
+    duration?: number;
+    image_url?: string;
   };
 
   if (!prompt) {
@@ -21,35 +25,48 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${BASE_URL}/v1/generations`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        prompt,
-        enhance_prompt: true,
-        check_nsfw: false,
-      }),
-    });
+    const token = await getGoogleAccessToken();
+
+    const res = await fetch(
+      `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${VEO_MODEL}:predictLongRunning`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          instances: [{ prompt }],
+          parameters: {
+            aspectRatio: aspect_ratio,
+            sampleCount: 1,
+            durationSeconds: Math.min(duration || 8, 30),
+          },
+        }),
+      }
+    );
 
     const text = await res.text();
-    let data: any;
-    try { data = JSON.parse(text); } catch {
-      return NextResponse.json({ error: `Higgsfield non-JSON response: ${text.slice(0, 300)}` }, { status: 500 });
+    let json: any;
+    try { json = JSON.parse(text); } catch {
+      return NextResponse.json({ error: `Non-JSON (${res.status}): ${text.slice(0, 300)}` }, { status: 500 });
     }
 
     if (!res.ok) {
-      return NextResponse.json({ error: data?.message || data?.error || `HTTP ${res.status}` }, { status: res.status });
+      const msg = json?.error?.message || json?.message || JSON.stringify(json).slice(0, 300);
+      return NextResponse.json({ error: msg }, { status: res.status });
     }
 
-    return NextResponse.json({
-      id: data.generation_id || data.request_id || data.id,
-      request_id: data.request_id,
-      status: data.status || "queued",
-    });
+    // name: "projects/.../locations/.../operations/OPERATION_ID"
+    const operationId = (json.name as string)?.split("/").pop();
+    if (!operationId) {
+      return NextResponse.json(
+        { error: `Veo не вернул operation ID: ${JSON.stringify(json).slice(0, 200)}` },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({ id: operationId, status: "queued" });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Network error" }, { status: 500 });
   }

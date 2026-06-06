@@ -5,19 +5,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutGrid, Sparkles, RefreshCw, Copy, Check, Download,
   Trash2, AlertCircle, Zap, Flame, ChevronLeft, ChevronRight,
-  CalendarDays, X,
+  CalendarDays, X, Send,
 } from "lucide-react";
 import Link from "next/link";
-import { useBgTask } from "@/lib/use-bg-task";
+import { useBgTask } from "@/lib/hooks/use-bg-task";
 import DirectionLayout, { type Tab } from "@/components/factory/DirectionLayout";
 import ContentPlanTab from "@/components/factory/ContentPlanTab";
 import AutopostTab from "@/components/factory/AutopostTab";
 import ApiKeyPlaceholder from "@/components/factory/ApiKeyPlaceholder";
 import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelector";
-import { PLATFORMS } from "@/lib/platforms";
+import { PLATFORMS } from "@/lib/data/platforms";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { pickImages } from "@/lib/carousel-images";
+import { pickImages } from "@/lib/data/carousel-images";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,13 +69,31 @@ function addToCalendar(r: CarouselResult) {
     const STORAGE_KEY = "adonis_calendar_v1";
     const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
     const pid = PLATFORMS.find(p => p.label === r.platform)?.id ?? "instagram";
+    const scheduledDate = format(new Date(), "yyyy-MM-dd");
+    const scheduledTime = "18:00";
     existing.push({
       id: Math.random().toString(36).slice(2) + Date.now().toString(36),
       directionId: "carousels", platformId: pid, topic: r.topic,
-      scheduledDate: format(new Date(), "yyyy-MM-dd"),
-      scheduledTime: "18:00", viralScore: r.viralScore, status: "draft",
+      scheduledDate, scheduledTime, viralScore: r.viralScore, status: "scheduled",
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+
+    // Сохраняем в Supabase с текстом карусели
+    const content = [
+      `📊 ${r.data.cover}`, r.data.subtitle, "",
+      ...r.data.slides.map(s => `📌 Слайд ${s.n}: ${s.heading}\n${s.text}`),
+      "", r.data.caption, r.data.hashtags,
+    ].join("\n").trim();
+    const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+    fetch("/api/autopost/schedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content, topic: r.topic, platform: pid,
+        direction_id: "carousels", scheduled_at: scheduledAt, viral_score: r.viralScore,
+      }),
+    }).catch(() => {});
+
     return true;
   } catch { return false; }
 }
@@ -95,6 +113,26 @@ function CarouselPreview({
   const [bgUrl, setBgUrl]         = useState("");
   const [copiedId, setCopiedId]   = useState<string | null>(null);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
+  const [tgState, setTgState]     = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [tgError, setTgError]     = useState<string | null>(null);
+
+  const sendToTelegram = async () => {
+    setTgState("sending");
+    setTgError(null);
+    try {
+      const res = await fetch("/api/publish/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "carousel", data }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setTgState("sent");
+    } catch (err: any) {
+      setTgError(err.message);
+      setTgState("error");
+    }
+  };
 
   const { data, viralScore, viralAnalysis, slideImages } = result;
   const totalSlides = data.slides.length + 1;
@@ -268,6 +306,26 @@ function CarouselPreview({
               : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:text-white hover:border-orange-500/30"
           )}>
           {addedToCalendar ? <><Check className="w-4 h-4" />Добавлено в календарь</> : <><CalendarDays className="w-4 h-4" />Добавить в автопостинг-календарь</>}
+        </button>
+      )}
+
+      {/* Send to Telegram */}
+      {showExport && (
+        <button
+          onClick={sendToTelegram}
+          disabled={tgState === "sending" || tgState === "sent"}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-medium transition-all",
+            tgState === "sent"
+              ? "border-sky-500/30 bg-sky-500/10 text-sky-400"
+              : tgState === "error"
+              ? "border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/10"
+              : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:text-white hover:border-sky-500/30 hover:bg-sky-500/5"
+          )}>
+          {tgState === "sending" && <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}><RefreshCw className="w-4 h-4" /></motion.div>Отправляю...</>}
+          {tgState === "sent"    && <><Check className="w-4 h-4" />Отправлено в Telegram</>}
+          {tgState === "error"   && <><Send className="w-4 h-4" />{tgError || "Ошибка — попробовать снова"}</>}
+          {tgState === "idle"    && <><Send className="w-4 h-4" />Отправить в Telegram</>}
         </button>
       )}
     </div>

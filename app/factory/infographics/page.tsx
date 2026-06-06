@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   PieChart, BarChart2, AlignLeft, List, Clock,
@@ -9,12 +9,13 @@ import {
   Play, CheckCircle2, ExternalLink, Loader2,
 } from "lucide-react";
 import DirectionLayout, { type Tab } from "@/components/factory/DirectionLayout";
+import { useVideoGen } from "@/lib/hooks/use-video-gen";
 import ContentPlanTab from "@/components/factory/ContentPlanTab";
 import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelector";
 import AutopostTab from "@/components/factory/AutopostTab";
 import VideoPromptPanel from "@/components/factory/VideoPromptPanel";
-import { useBgTask } from "@/lib/use-bg-task";
-import type { InfographicData, InfographicFrame } from "@/lib/infographic-types";
+import { useBgTask } from "@/lib/hooks/use-bg-task";
+import type { InfographicData, InfographicFrame } from "@/lib/types/infographic-types";
 
 // ─── Options ──────────────────────────────────────────────────────────────────
 
@@ -409,22 +410,22 @@ function ScriptTab({
 // ─── Create Video Tab ─────────────────────────────────────────────────────────
 
 const MODELS = [
-  { id: "kling-3",  label: "Kling 3.0",  desc: "Быстро · ~6 кредитов" },
-  { id: "wan-2.7",  label: "Wan 2.7",    desc: "Анимация · ~10 кредитов" },
-  { id: "sora-2",   label: "Sora 2",     desc: "Качество · ~40 кредитов" },
+  { id: "kling3_0",              label: "Kling 3.0",         desc: "Multi-shot · аудио · быстро" },
+  { id: "cinematic_studio_3_0",  label: "Cinema Studio 3.0", desc: "Higgsfield · топ качество" },
+  { id: "grok_video",            label: "Grok Imagine",      desc: "xAI · text-to-video · аудио" },
 ];
 
-type RenderState = "idle" | "submitting" | "polling" | "done" | "error";
+const DURATIONS = [
+  { value: 5,  label: "5 сек",  credits: "~10 кр" },
+  { value: 10, label: "10 сек", credits: "~20 кр" },
+  { value: 15, label: "15 сек", credits: "~30 кр" },
+];
 
 function CreateVideoTab({ infographicData }: { infographicData: InfographicData | null }) {
   const [prompt, setPrompt]       = useState("");
-  const [model, setModel]         = useState("kling-3");
-  const [renderState, setRenderState] = useState<RenderState>("idle");
-  const [videoUrl, setVideoUrl]   = useState<string | null>(null);
-  const [progress, setProgress]   = useState(0);
-  const [errorMsg, setErrorMsg]   = useState<string | null>(null);
-  const pollRef                   = useRef<ReturnType<typeof setInterval> | null>(null);
-  const genIdRef                  = useRef<string | null>(null);
+  const [model, setModel]         = useState("kling3_0");
+  const [duration, setDuration]   = useState(5);
+  const { state: renderState, videoUrl, progress, error: errorMsg, generate: runGen, reset } = useVideoGen({ direction: "infographics", topic: infographicData?.title });
 
   useEffect(() => {
     if (infographicData) {
@@ -440,66 +441,9 @@ function CreateVideoTab({ infographicData }: { infographicData: InfographicData 
     }
   }, [infographicData]);
 
-  useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, []);
-
-  const startPolling = (id: string) => {
-    genIdRef.current = id;
-    setRenderState("polling");
-    setProgress(5);
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/higgsfield/status/${id}`);
-        const data = await res.json();
-        if (data.status === "completed" && data.url) {
-          clearInterval(pollRef.current!);
-          setVideoUrl(data.url);
-          setRenderState("done");
-        } else if (data.status === "failed") {
-          clearInterval(pollRef.current!);
-          setErrorMsg(data.error || "Higgsfield вернул ошибку");
-          setRenderState("error");
-        } else {
-          setProgress((p) => Math.min(p + 3, 90));
-        }
-      } catch {
-        // продолжаем поллинг
-      }
-    }, 4000);
-  };
-
-  const createVideo = async () => {
+  const createVideo = () => {
     if (!prompt.trim()) return;
-    setRenderState("submitting");
-    setErrorMsg(null);
-    setVideoUrl(null);
-    setProgress(0);
-    try {
-      const res = await fetch("/api/higgsfield/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), model, type: "infographic" }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setErrorMsg(data.error || `HTTP ${res.status}`);
-        setRenderState("error");
-        return;
-      }
-      startPolling(data.id);
-    } catch (e: any) {
-      setErrorMsg(e?.message || "Ошибка сети");
-      setRenderState("error");
-    }
-  };
-
-  const reset = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    setRenderState("idle");
-    setVideoUrl(null);
-    setProgress(0);
-    setErrorMsg(null);
+    runGen({ prompt: prompt.trim(), model, duration, aspect_ratio: "9:16" });
   };
 
   return (
@@ -534,6 +478,22 @@ function CreateVideoTab({ infographicData }: { infographicData: InfographicData 
               }`}>
               <span className={`text-xs font-semibold ${model === m.id ? "text-white" : "text-slate-400"}`}>{m.label}</span>
               <span className="text-[10px] text-slate-600 mt-0.5">{m.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Duration */}
+      <div>
+        <p className="text-xs font-medium text-slate-400 mb-2">Длительность</p>
+        <div className="grid grid-cols-3 gap-2">
+          {DURATIONS.map((d) => (
+            <button key={d.value} onClick={() => setDuration(d.value)}
+              className={`flex flex-col items-center p-3 rounded-xl border transition-all ${
+                duration === d.value ? "border-cyan-500/40 bg-cyan-500/10" : "border-white/[0.06] hover:border-white/[0.12]"
+              }`}>
+              <span className={`text-xs font-semibold ${duration === d.value ? "text-white" : "text-slate-400"}`}>{d.label}</span>
+              <span className="text-[10px] text-slate-600 mt-0.5">{d.credits}</span>
             </button>
           ))}
         </div>
@@ -623,7 +583,7 @@ export default function InfographicsDirectionPage() {
   return (
     <DirectionLayout
       title="Инфографика"
-      subtitle="Сценарий · Контент-план · Рендер через Creatomate"
+      subtitle="Сценарий · Контент-план · Рендер через Higgsfield AI"
       accentColor="text-cyan-400"
       activeTab={activeTab}
       onTabChange={setActiveTab}

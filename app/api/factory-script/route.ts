@@ -1,10 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { ADONIS_CONTEXT } from "@/lib/adonis-context";
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { generateText } from "@/lib/google-client";
+import { ADONIS_CONTEXT } from "@/lib/data/adonis-context";
 
 type Direction = "heygen-live" | "heygen-ai" | "cartoon" | "clips";
 
@@ -180,14 +178,7 @@ export async function POST(req: NextRequest) {
 
 Напиши детальный структурированный сценарий строго по формату из системного промпта. Не добавляй вступлений типа "Вот сценарий:" — сразу начинай с первого блока.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 3000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-
-    const content = message.content[0].type === "text" ? message.content[0].text.trim() : "";
+    const content = await generateText(userPrompt, { maxTokens: 3000, systemPrompt });
     const viralScore = Math.floor(Math.random() * 15) + 82;
 
     return NextResponse.json({ content, viralScore });

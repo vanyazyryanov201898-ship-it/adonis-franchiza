@@ -1,9 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { generateText } from "@/lib/google-client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,13 +34,7 @@ ${samplesText}
 
 Отвечай ТОЛЬКО JSON, без пояснений.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 600,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const raw = message.content[0].type === "text" ? message.content[0].text.trim() : "{}";
+    const raw = (await generateText(prompt, { maxTokens: 600 })).trim() || "{}";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Некорректный ответ");
 

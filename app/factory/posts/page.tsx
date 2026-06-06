@@ -7,12 +7,12 @@ import {
   Trash2, AlertCircle, Zap, Flame, CalendarDays,
 } from "lucide-react";
 import Link from "next/link";
-import { useBgTask } from "@/lib/use-bg-task";
+import { useBgTask } from "@/lib/hooks/use-bg-task";
 import DirectionLayout, { type Tab } from "@/components/factory/DirectionLayout";
 import ContentPlanTab from "@/components/factory/ContentPlanTab";
 import AutopostTab from "@/components/factory/AutopostTab";
 import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelector";
-import { PLATFORMS } from "@/lib/platforms";
+import { PLATFORMS } from "@/lib/data/platforms";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -58,17 +58,35 @@ function addToCalendar(post: PostResult) {
     const STORAGE_KEY = "adonis_calendar_v1";
     const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
     const pid = PLATFORMS.find(p => p.label.toLowerCase() === post.platform.toLowerCase())?.id ?? "instagram";
+    const scheduledDate = format(new Date(), "yyyy-MM-dd");
+    const scheduledTime = "19:00";
     const newPost = {
       id: Math.random().toString(36).slice(2) + Date.now().toString(36),
       directionId: "posts",
       platformId: pid,
       topic: post.topic,
-      scheduledDate: format(new Date(), "yyyy-MM-dd"),
-      scheduledTime: "19:00",
+      scheduledDate,
+      scheduledTime,
       viralScore: post.viralScore,
-      status: "draft",
+      status: "scheduled",
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, newPost]));
+
+    // Сохраняем в Supabase с реальным контентом для автопубликации
+    const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+    fetch("/api/autopost/schedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content:      post.content,
+        topic:        post.topic,
+        platform:     pid,
+        direction_id: "posts",
+        scheduled_at: scheduledAt,
+        viral_score:  post.viralScore,
+      }),
+    }).catch(() => {}); // fire-and-forget
+
     return true;
   } catch { return false; }
 }
@@ -84,6 +102,8 @@ function ScriptTab({ onPostGenerated }: { onPostGenerated: (r: PostResult) => vo
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
   const [copied, setCopied]       = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
+  const [tgState, setTgState]     = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [tgError, setTgError]     = useState<string | null>(null);
 
   const { run, isRunning, isDone, result, error, clear } = useBgTask<PostResult>("posts-script");
 
@@ -117,6 +137,25 @@ function ScriptTab({ onPostGenerated }: { onPostGenerated: (r: PostResult) => vo
     navigator.clipboard.writeText(result.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const sendToTelegram = async () => {
+    if (!result) return;
+    setTgState("sending");
+    setTgError(null);
+    try {
+      const res = await fetch("/api/publish/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "post", content: result.content }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setTgState("sent");
+    } catch (err: any) {
+      setTgError(err.message);
+      setTgState("error");
+    }
   };
 
   const download = () => {
@@ -294,6 +333,24 @@ function ScriptTab({ onPostGenerated }: { onPostGenerated: (r: PostResult) => vo
                   : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:text-white hover:border-emerald-500/30 hover:bg-emerald-500/5"
               )}>
               {addedToCalendar ? <><Check className="w-4 h-4" />Добавлено в календарь</> : <><CalendarDays className="w-4 h-4" />Добавить в автопостинг-календарь</>}
+            </button>
+
+            {/* Send to Telegram */}
+            <button
+              onClick={sendToTelegram}
+              disabled={tgState === "sending" || tgState === "sent"}
+              className={cn(
+                "w-full flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-medium transition-all",
+                tgState === "sent"
+                  ? "border-sky-500/30 bg-sky-500/10 text-sky-400"
+                  : tgState === "error"
+                  ? "border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/10"
+                  : "border-white/[0.08] bg-white/[0.03] text-slate-300 hover:text-white hover:border-sky-500/30 hover:bg-sky-500/5"
+              )}>
+              {tgState === "sending" && <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}><RefreshCw className="w-4 h-4" /></motion.div>Отправляю...</>}
+              {tgState === "sent"    && <><Check className="w-4 h-4" />Отправлено в Telegram</>}
+              {tgState === "error"   && <><Send className="w-4 h-4" />{tgError || "Ошибка — попробовать снова"}</>}
+              {tgState === "idle"    && <><Send className="w-4 h-4" />Отправить в Telegram</>}
             </button>
 
             <button onClick={generate}

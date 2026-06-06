@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Send, TrendingUp, Users, Film, Flame, Activity } from "lucide-react";
-import { aiActivityFeed } from "@/lib/mock-data";
+import { aiActivityFeed } from "@/lib/data/mock-data";
 
 const typeConfig = {
   generate: { icon: Sparkles, color: "text-violet-400", bg: "bg-violet-400/10" },

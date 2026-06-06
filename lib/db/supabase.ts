@@ -77,13 +77,30 @@ export type VideoQueueItem = {
   created_at: string;
 };
 
+export type VideoGeneration = {
+  id: string;
+  direction: string;
+  topic: string | null;
+  prompt: string;
+  model: string;
+  duration_sec: number;
+  higgs_id: string | null;
+  status: "queued" | "processing" | "completed" | "failed";
+  video_url: string | null;
+  credits_used: number | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
 export type ScheduledPost = {
   id: string;
   user_id: string;
   title: string;
+  content: string | null;
   platform: string;
+  direction_id: string | null;
   scheduled_at: string;
-  status: "scheduled" | "processing" | "published" | "draft";
+  status: "scheduled" | "processing" | "published" | "failed" | "draft";
   video_id: string | null;
   created_at: string;
 };

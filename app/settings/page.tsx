@@ -11,7 +11,7 @@ import {
   CheckCircle2, XCircle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import { useTheme, type AccentColor } from "@/lib/theme-context";
+import { useTheme, type AccentColor } from "@/lib/contexts/theme-context";
 
 const settingsSections = [
   { id: "profile", label: "Профиль", icon: User },

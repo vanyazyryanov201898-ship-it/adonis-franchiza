@@ -11,7 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { revenueChartData } from "@/lib/mock-data";
+import { revenueChartData } from "@/lib/data/mock-data";
 import { TrendingUp } from "lucide-react";
 
 const CustomTooltip = ({ active, payload, label }: any) => {

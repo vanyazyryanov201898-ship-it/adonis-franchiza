@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { RadialBarChart, RadialBar, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { platformReachData } from "@/lib/mock-data";
+import { platformReachData } from "@/lib/data/mock-data";
 
 const platformColors: Record<string, string> = {
   TikTok: "#fe2c55",

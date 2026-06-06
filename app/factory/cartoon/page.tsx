@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, RefreshCw, Copy, Check, AlertCircle, Zap, Shield, Play, Video, ExternalLink, Loader2 } from "lucide-react";
+import { Sparkles, RefreshCw, Copy, Check, AlertCircle, Zap, Shield, Play, Video, ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
+import { useVideoGen } from "@/lib/hooks/use-video-gen";
 import DirectionLayout, { type Tab } from "@/components/factory/DirectionLayout";
 import ContentPlanTab from "@/components/factory/ContentPlanTab";
 import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelector";
 import AutopostTab from "@/components/factory/AutopostTab";
 import VideoPromptPanel from "@/components/factory/VideoPromptPanel";
-import { useBgTask } from "@/lib/use-bg-task";
+import { useBgTask } from "@/lib/hooks/use-bg-task";
 
 const suggestedTopics = [
   "Почему мерч никогда не умрёт — монолог Спартанца",
@@ -19,7 +20,7 @@ const suggestedTopics = [
   "Утро спартанца: день из жизни партнёра АДОНИС",
 ];
 
-function ScriptTab({ onScriptGenerated }: { onScriptGenerated: (script: string, topic: string) => void }) {
+function ScriptTab({ onScriptGenerated, onGoToCreate }: { onScriptGenerated: (script: string, topic: string) => void; onGoToCreate: () => void }) {
   const [topic, setTopic]   = useState("");
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
   const [copied, setCopied] = useState(false);
@@ -131,6 +132,11 @@ function ScriptTab({ onScriptGenerated }: { onScriptGenerated: (script: string, 
               </div>
               <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{content}</p>
             </div>
+            <button onClick={onGoToCreate}
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-pink-600/80 to-purple-600/80 hover:from-pink-600 hover:to-purple-600 text-white font-semibold text-sm flex items-center justify-center gap-2.5 transition-all">
+              <Video className="w-4 h-4" />
+              Создать видео по этому монологу →
+            </button>
             <button onClick={generate}
               className="w-full py-3 rounded-2xl border border-white/[0.06] text-sm text-slate-400 hover:text-white hover:border-pink-500/25 transition-all flex items-center justify-center gap-2">
               <RefreshCw className="w-4 h-4" /> Ещё вариант
@@ -148,13 +154,17 @@ function ScriptTab({ onScriptGenerated }: { onScriptGenerated: (script: string, 
   );
 }
 
-const CARTOON_MODELS = [
-  { id: "kling-3", label: "Kling 3.0", desc: "Быстро · ~6 кредитов" },
-  { id: "wan-2.7", label: "Wan 2.7",   desc: "Анимация · ~10 кредитов" },
-  { id: "sora-2",  label: "Sora 2",    desc: "Качество · ~40 кредитов" },
+const DURATIONS = [
+  { value: 5,  label: "5 сек",  credits: "~10 кр" },
+  { value: 10, label: "10 сек", credits: "~20 кр" },
+  { value: 15, label: "15 сек", credits: "~30 кр" },
 ];
 
-type RenderState = "idle" | "submitting" | "polling" | "done" | "error";
+const CARTOON_MODELS = [
+  { id: "kling3_0",             label: "Kling 3.0",         desc: "Multi-shot · аудио · быстро" },
+  { id: "cinematic_studio_3_0", label: "Cinema Studio 3.0", desc: "Higgsfield · топ качество" },
+  { id: "grok_video",           label: "Grok Imagine",      desc: "xAI · text-to-video · аудио" },
+];
 
 function CreateVideoTab({ script, topic }: { script: string | null; topic: string }) {
   const [prompt, setPrompt]     = useState(() =>
@@ -162,63 +172,13 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
       ? `Cartoon animation of Spartan warrior mascot (small spartan in helmet, energetic, funny). Topic: "${topic}". Script: ${script.slice(0, 300)}. Style: 2D cartoon animation, Pixar-like, vibrant colors, dynamic movement, brand colors pink and dark.`
       : ""
   );
-  const [model, setModel]       = useState("kling-3");
-  const [renderState, setRenderState] = useState<RenderState>("idle");
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const pollRef                 = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [model, setModel]       = useState("kling3_0");
+  const [duration, setDuration] = useState(5);
+  const { state: renderState, videoUrl, progress, error: errorMsg, generate: runGen, reset } = useVideoGen({ direction: "cartoon", topic });
 
-  useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, []);
-
-  const startPolling = (id: string) => {
-    setRenderState("polling");
-    setProgress(5);
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/higgsfield/status/${id}`);
-        const data = await res.json();
-        if (data.status === "completed" && data.url) {
-          clearInterval(pollRef.current!);
-          setVideoUrl(data.url);
-          setRenderState("done");
-        } else if (data.status === "failed") {
-          clearInterval(pollRef.current!);
-          setErrorMsg(data.error || "Ошибка генерации");
-          setRenderState("error");
-        } else {
-          setProgress((p) => Math.min(p + 3, 90));
-        }
-      } catch { /* продолжаем поллинг */ }
-    }, 4000);
-  };
-
-  const createVideo = async () => {
+  const createVideo = () => {
     if (!prompt.trim()) return;
-    setRenderState("submitting");
-    setErrorMsg(null);
-    setVideoUrl(null);
-    setProgress(0);
-    try {
-      const res = await fetch("/api/higgsfield/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), model, type: "cartoon" }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setErrorMsg(data.error || `HTTP ${res.status}`); setRenderState("error"); return; }
-      startPolling(data.id);
-    } catch (e: any) {
-      setErrorMsg(e?.message || "Ошибка сети");
-      setRenderState("error");
-    }
-  };
-
-  const reset = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    setRenderState("idle"); setVideoUrl(null); setProgress(0); setErrorMsg(null);
+    runGen({ prompt: prompt.trim(), model, duration, aspect_ratio: "9:16" });
   };
 
   return (
@@ -244,6 +204,22 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
               }`}>
               <span className={`text-xs font-semibold ${model === m.id ? "text-white" : "text-slate-400"}`}>{m.label}</span>
               <span className="text-[10px] text-slate-600 mt-0.5">{m.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Duration */}
+      <div>
+        <p className="text-xs font-medium text-slate-400 mb-2">Длительность</p>
+        <div className="grid grid-cols-3 gap-2">
+          {DURATIONS.map((d) => (
+            <button key={d.value} onClick={() => setDuration(d.value)}
+              className={`flex flex-col items-center p-3 rounded-xl border transition-all ${
+                duration === d.value ? "border-pink-500/40 bg-pink-500/10" : "border-white/[0.06] hover:border-white/[0.12]"
+              }`}>
+              <span className={`text-xs font-semibold ${duration === d.value ? "text-white" : "text-slate-400"}`}>{d.label}</span>
+              <span className="text-[10px] text-slate-600 mt-0.5">{d.credits}</span>
             </button>
           ))}
         </div>
@@ -335,6 +311,7 @@ export default function CartoonPage() {
       {activeTab === "script" && (
         <ScriptTab
           onScriptGenerated={(s, t) => { setScript(s); setTopic(t); }}
+          onGoToCreate={() => setActiveTab("create")}
         />
       )}
       {activeTab === "plan" && <ContentPlanTab directionLabel="Мультяшки Спартанец" directionId="cartoon" />}

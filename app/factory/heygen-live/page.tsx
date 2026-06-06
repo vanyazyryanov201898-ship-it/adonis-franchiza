@@ -8,7 +8,7 @@ import ContentPlanTab from "@/components/factory/ContentPlanTab";
 import ApiKeyPlaceholder from "@/components/factory/ApiKeyPlaceholder";
 import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelector";
 import AutopostTab from "@/components/factory/AutopostTab";
-import { useBgTask } from "@/lib/use-bg-task";
+import { useBgTask } from "@/lib/hooks/use-bg-task";
 
 const suggestedTopics = [
   "Как я открыл бизнес без опыта и заработал первый миллион",

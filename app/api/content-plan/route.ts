@@ -1,10 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { ADONIS_CONTEXT } from "@/lib/adonis-context";
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { generateText } from "@/lib/google-client";
+import { ADONIS_CONTEXT } from "@/lib/data/adonis-context";
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,13 +56,7 @@ ${ADONIS_CONTEXT}
 
 Верни ТОЛЬКО JSON.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4000,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const raw = message.content[0].type === "text" ? message.content[0].text.trim() : "{}";
+    const raw = (await generateText(prompt, { maxTokens: 4000 })).trim() || "{}";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Некорректный ответ");
 

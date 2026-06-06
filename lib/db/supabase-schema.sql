@@ -93,7 +93,29 @@ create table if not exists scheduled_posts (
   created_at   timestamptz default now()
 );
 
--- 6. Настройки бренда
+-- 6. Генерации видео (Higgsfield)
+create table if not exists video_generations (
+  id           uuid primary key default gen_random_uuid(),
+  direction    text not null,
+  topic        text,
+  prompt       text not null,
+  model        text not null,
+  duration_sec int  not null default 5,
+  higgs_id     text,
+  status       text not null default 'queued'
+                 check (status in ('queued','processing','completed','failed')),
+  video_url    text,
+  credits_used int,
+  created_at   timestamptz default now(),
+  completed_at timestamptz
+);
+
+alter table video_generations enable row level security;
+create policy "public insert" on video_generations for insert with check (true);
+create policy "public select" on video_generations for select using (true);
+create policy "public update" on video_generations for update using (true);
+
+-- 7. Настройки бренда
 create table if not exists brand_settings (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid references auth.users(id) on delete cascade unique,

@@ -7,7 +7,7 @@ import {
   ArrowUpRight, ArrowDownRight, Download, RefreshCw,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import { analyticsData, platformReachData } from "@/lib/mock-data";
+import { analyticsData, platformReachData } from "@/lib/data/mock-data";
 import {
   BarChart, Bar, XAxis, YAxis,
   Tooltip, ResponsiveContainer, CartesianGrid,

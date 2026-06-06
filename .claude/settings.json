@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"ACTIVE SKILLS REMINDER: (1) social-media-manager — auto-invoke for any post, caption, content plan, hashtags, SMM strategy, TikTok/Instagram/Telegram content. (2) ai-video-prompting — auto-invoke for any video prompt, Kling, Higgsfield, Runway, Sora. Do NOT wait for user to type slash commands — invoke these skills proactively.\"}'",
+            "shell": "powershell"
+          }
+        ]
+      }
+    ]
+  }
+}

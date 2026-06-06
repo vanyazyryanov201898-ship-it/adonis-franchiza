@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useReducer, useCallback } from "react";
-import { bgStore, type BgTask } from "./bg-store";
+import { bgStore, type BgTask } from "../stores/bg-store";
 
 export function useBgTask<T = unknown>(key: string) {
   const [, tick] = useReducer((x: number) => x + 1, 0);

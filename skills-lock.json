@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "ai-video-prompting": {
+      "source": "guia-matthieu/clawfu-skills",
+      "sourceType": "github",
+      "skillPath": "skills/video/ai-video-prompting/SKILL.md",
+      "computedHash": "761050fb0ba93a95e20c7f9cd776bef2065c5194b11e4dcd15f044ffa57d75e7"
+    },
+    "marketingskills-ai-agents": {
+      "source": "aradotso/trending-skills",
+      "sourceType": "github",
+      "skillPath": "skills/marketingskills-ai-agents/SKILL.md",
+      "computedHash": "86174327528326ef78632a1ac88de63929f31f14396d88fc8387bae3d2068df2"
+    },
+    "social-media-manager": {
+      "source": "alirezarezvani/claude-skills",
+      "sourceType": "github",
+      "skillPath": "marketing-skill/skills/social-media-manager/SKILL.md",
+      "computedHash": "004ccd1436d27c1648b067bfdcf742cb37f19548755db8adf53c5d4bfeb47f8c"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ThemeProvider } from "@/lib/theme-context";
-import { ToastProvider } from "@/lib/toast-context";
+import { ThemeProvider } from "@/lib/contexts/theme-context";
+import { ToastProvider } from "@/lib/contexts/toast-context";
 
 export const metadata: Metadata = {
   title: "ADONIS AI Platform — Контент-фабрика для продажи франшиз",

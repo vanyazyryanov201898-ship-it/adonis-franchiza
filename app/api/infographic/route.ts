@@ -1,9 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { generateText } from "@/lib/google-client";
 
 type TrendContext = {
   title: string;
@@ -131,13 +129,7 @@ export async function POST(req: NextRequest) {
 - visual_note — точное описание с hex-цветами и расположением элементов`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8000,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const raw = (message.content[0] as { type: string; text: string }).text;
+    const raw = await generateText(prompt, { maxTokens: 8000 });
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {

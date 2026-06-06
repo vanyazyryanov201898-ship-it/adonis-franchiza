@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Search, Cpu, Sparkles, X, CheckCircle2, AlertCircle, Info, Menu, LogOut } from "lucide-react";
+import { Bell, Search, Cpu, Sparkles, X, CheckCircle2, AlertCircle, Info, Menu, LogOut, Coins } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface HeaderProps {
@@ -27,6 +27,7 @@ export default function Header({ title, subtitle, onMobileMenuToggle }: HeaderPr
   };
   const [notifList, setNotifList] = useState(mockNotifications);
   const [currentTime, setCurrentTime] = useState<string>("");
+  const [hCredits, setHCredits] = useState<number | null>(null);
   const [aiThinking, setAiThinking] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -59,6 +60,19 @@ export default function Header({ title, subtitle, onMobileMenuToggle }: HeaderPr
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const fetchCredits = async () => {
+      try {
+        const res = await fetch("/api/higgsfield/balance");
+        const data = await res.json();
+        if (data.credits !== null && data.credits !== undefined) setHCredits(data.credits);
+      } catch {}
+    };
+    fetchCredits();
+    const interval = setInterval(fetchCredits, 60_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -203,6 +217,15 @@ export default function Header({ title, subtitle, onMobileMenuToggle }: HeaderPr
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
+          {/* Higgsfield credits */}
+          {hCredits !== null && (
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06]" title="Higgsfield кредиты">
+              <Coins className="w-3.5 h-3.5 text-amber-400" />
+              <span className={`text-xs font-semibold ${hCredits < 50 ? "text-red-400" : "text-amber-400"}`}>{hCredits}</span>
+              <span className="text-[10px] text-slate-600">кр</span>
+            </div>
+          )}
+
           {/* Search */}
           <button
             onClick={() => setShowSearch(true)}

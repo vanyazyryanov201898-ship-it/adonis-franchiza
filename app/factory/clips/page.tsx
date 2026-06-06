@@ -9,7 +9,7 @@ import ApiKeyPlaceholder from "@/components/factory/ApiKeyPlaceholder";
 import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelector";
 import AutopostTab from "@/components/factory/AutopostTab";
 import VideoPromptPanel from "@/components/factory/VideoPromptPanel";
-import { useBgTask } from "@/lib/use-bg-task";
+import { useBgTask } from "@/lib/hooks/use-bg-task";
 
 const suggestedSources = [
   "Интервью с партнёром Кирьяком про 16 млн рублей",

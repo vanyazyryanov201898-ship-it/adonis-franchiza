@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Plus, X, Clock, Send,
   Check, Trash2, CalendarDays, LayoutGrid, Star, TrendingUp,
-  Zap, BarChart2,
+  Zap, BarChart2, RefreshCw, PlayCircle,
 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
@@ -14,8 +14,8 @@ import {
 } from "date-fns";
 import { ru } from "date-fns/locale";
 import AppLayout from "@/components/layout/AppLayout";
-import { PLATFORMS } from "@/lib/platforms";
-import { getBestTimes, getHourPerformance, getTimeLabel, PLATFORM_BEST_TIMES } from "@/lib/best-times";
+import { PLATFORMS } from "@/lib/data/platforms";
+import { getBestTimes, getHourPerformance, getTimeLabel, PLATFORM_BEST_TIMES } from "@/lib/data/best-times";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -427,7 +427,31 @@ export default function AutopostPage() {
   const [dragId, setDragId]             = useState<string | null>(null);
   const [dropTarget, setDropTarget]     = useState<string | null>(null); // "YYYY-MM-DD|HH:MM"
   const [editPost, setEditPost]         = useState<CalendarPost | null>(null);
+  const [runState, setRunState]         = useState<"idle" | "running" | "done" | "error">("idle");
+  const [runResult, setRunResult]       = useState<{ published: number; failed: number } | null>(null);
   const weekScrollRef                   = useRef<HTMLDivElement>(null);
+
+  const handleRunAutopost = async () => {
+    setRunState("running");
+    setRunResult(null);
+    try {
+      const res = await fetch("/api/autopost/run", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setRunResult({ published: data.published ?? 0, failed: data.failed?.length ?? 0 });
+      setRunState("done");
+      // Обновляем статус опубликованных постов в localStorage
+      if ((data.published ?? 0) > 0) {
+        const stored = loadPosts();
+        savePosts(stored); // триггерим перечитку (в реальности статус придёт из Supabase)
+      }
+      setTimeout(() => setRunState("idle"), 5000);
+    } catch (err: any) {
+      setRunResult({ published: 0, failed: 1 });
+      setRunState("error");
+      setTimeout(() => setRunState("idle"), 5000);
+    }
+  };
 
   useEffect(() => {
     const stored = loadPosts();
@@ -522,6 +546,35 @@ export default function AutopostPage() {
               <div className="text-[11px] text-slate-500">{s.label}</div>
             </div>
           ))}
+        </div>
+
+        {/* Run autopost button */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleRunAutopost}
+            disabled={runState === "running"}
+            className={cn(
+              "flex items-center gap-2 px-5 py-2.5 rounded-2xl border text-sm font-semibold transition-all",
+              runState === "done"
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                : runState === "error"
+                ? "border-red-500/30 bg-red-500/5 text-red-400"
+                : "border-violet-500/30 bg-violet-500/10 text-white hover:bg-violet-500/20"
+            )}
+          >
+            {runState === "running" ? (
+              <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}><RefreshCw className="w-4 h-4" /></motion.div>Проверяю расписание...</>
+            ) : runState === "done" ? (
+              <><Check className="w-4 h-4" />{runResult?.published ? `Опубликовано: ${runResult.published}` : "Нет постов на сейчас"}</>
+            ) : runState === "error" ? (
+              <><Send className="w-4 h-4" />Ошибка — попробовать снова</>
+            ) : (
+              <><PlayCircle className="w-4 h-4" />Запустить автопостинг</>
+            )}
+          </button>
+          <p className="text-xs text-slate-600">
+            {runState === "idle" ? "Публикует все запланированные посты у которых наступило время" : ""}
+          </p>
         </div>
 
         {/* Direction legend */}

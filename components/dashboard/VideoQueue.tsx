@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Play, CheckCircle2, Clock, Loader2, Video, Zap } from "lucide-react";
-import { videoQueue } from "@/lib/mock-data";
+import { videoQueue } from "@/lib/data/mock-data";
 import { cn } from "@/lib/utils";
 
 const platformColors: Record<string, string> = {

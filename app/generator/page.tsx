@@ -9,7 +9,7 @@ import {
   LayoutGrid, Send, BarChart2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import { pickImages } from "@/lib/carousel-images";
+import { pickImages } from "@/lib/data/carousel-images";
 
 const contentTypes = [
   { id: "scenario",    label: "Сценарий",    icon: Video,         description: "Полный сценарий ролика" },

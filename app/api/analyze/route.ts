@@ -1,9 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+import { generateText } from "@/lib/google-client";
 
 // ─── Extract username/handle from URL ─────────────────────────
 function extractUsername(url: string): string {
@@ -176,13 +174,7 @@ ${dataBlock}
 - format: "video" или "post"
 - Всё на русском`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 3000,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const raw = message.content[0].type === "text" ? message.content[0].text : "";
+    const raw = await generateText(prompt, { maxTokens: 3000 });
     const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const data = JSON.parse(jsonStr);
     data._sourceHint = isReal ? realInfo.slice(0, 300) : "";

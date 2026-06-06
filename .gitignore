@@ -19,3 +19,7 @@ npm-debug.log*
 
 # TypeScript build info
 tsconfig.tsbuildinfo
+
+# Test results
+test-results/
+playwright-report/

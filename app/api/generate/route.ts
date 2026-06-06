@@ -1,13 +1,9 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { createServerClient } from "@/lib/supabase";
-import { ADONIS_CONTEXT } from "@/lib/adonis-context";
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+import { generateText } from "@/lib/google-client";
+import { createServerClient } from "@/lib/db/supabase";
+import { ADONIS_CONTEXT } from "@/lib/data/adonis-context";
 
 // ─── Цель контента ────────────────────────────────────────────
 const GOAL_CONTEXT: Record<string, string> = {
@@ -192,12 +188,7 @@ ${goalDesc}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
-#хэштег1 #хэштег2 [10-15 хэштегов]
-
-━━━━━━━━━━━━━━━━━━━━━━
-
-⏰ Лучшее время: [время]
-📊 Прогноз охвата: [X–Y тыс]`,
+#хэштег1 #хэштег2 [10-15 хэштегов]`,
 
     carousel: `Ты — контент-стратег. Создай КАРУСЕЛЬ для Instagram по теме «${topic}» для АДОНИС.
 
@@ -294,13 +285,7 @@ ${content.slice(0, 800)}
 - positives: конкретные сильные стороны этого контента (упоминай цифры если есть)
 - improvements: конкретные рекомендации по улучшению`;
 
-    const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 300,
-      messages: [{ role: "user", content: analysisPrompt }],
-    });
-
-    const raw = msg.content[0].type === "text" ? msg.content[0].text.trim() : "";
+    const raw = (await generateText(analysisPrompt, { maxTokens: 300 })).trim();
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
   } catch {}
@@ -321,13 +306,7 @@ export async function POST(req: NextRequest) {
       prompt += `\n\nВАЖНО — Голос бренда: ${brandVoice}\nПиши строго в этом стиле.`;
     }
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1500,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const raw = message.content[0].type === "text" ? message.content[0].text : "";
+    const raw = await generateText(prompt, { maxTokens: 1500 });
 
     let content = raw;
     let carouselData = null;

@@ -7,7 +7,7 @@ import DirectionLayout, { type Tab } from "@/components/factory/DirectionLayout"
 import ContentPlanTab from "@/components/factory/ContentPlanTab";
 import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelector";
 import AutopostTab from "@/components/factory/AutopostTab";
-import { useBgTask } from "@/lib/use-bg-task";
+import { useBgTask } from "@/lib/hooks/use-bg-task";
 import { ExternalLink } from "lucide-react";
 
 const suggestedTopics = [

@@ -4,9 +4,10 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Wand2, Copy, Check, ChevronDown, ChevronUp,
-  RefreshCw, Sparkles, Info, Settings2,
+  RefreshCw, Sparkles, Info, Settings2, Play, Loader2, CheckCircle2, AlertCircle, ExternalLink,
 } from "lucide-react";
-import { useBgTask } from "@/lib/use-bg-task";
+import { useBgTask } from "@/lib/hooks/use-bg-task";
+import { useVideoGen } from "@/lib/hooks/use-video-gen";
 import { cn } from "@/lib/utils";
 
 type VideoPromptItem = {
@@ -163,6 +164,126 @@ function PromptCard({ item, scriptText }: { item: VideoPromptItem; scriptText?: 
   );
 }
 
+const HIGGS_MODELS = [
+  { id: "kling3_0",            label: "Kling 3.0" },
+  { id: "grok_video",          label: "Grok" },
+  { id: "cinematic_studio_3_0",label: "Cinema" },
+];
+
+const HIGGS_DURATIONS = [
+  { value: 5,  label: "5с",  credits: "~10 кр" },
+  { value: 10, label: "10с", credits: "~20 кр" },
+  { value: 15, label: "15с", credits: "~30 кр" },
+];
+
+function HiggsDirectGen({ bestPrompt }: { bestPrompt: string }) {
+  const [model, setModel]       = useState("kling3_0");
+  const [duration, setDuration] = useState(5);
+  const [prompt, setPrompt]     = useState(bestPrompt);
+  const { state, videoUrl, progress, error, generate: runGen, reset } = useVideoGen({ direction: "video-prompt" });
+
+  const isLoading = state === "submitting" || state === "polling";
+  const displayProgress = state === "submitting" ? 2 : progress;
+
+  const generate = () => {
+    if (!prompt.trim()) return;
+    runGen({ prompt: prompt.trim(), model, duration, aspect_ratio: "9:16" });
+  };
+
+  return (
+    <div className="p-4 rounded-2xl border border-violet-500/20 bg-violet-900/10 space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-violet-400" />
+        <span className="text-xs font-semibold text-violet-300">Сгенерировать сразу в Higgsfield</span>
+      </div>
+
+      {/* Model + Duration row */}
+      <div className="flex gap-2">
+        <div className="flex gap-1 flex-1">
+          {HIGGS_MODELS.map((m) => (
+            <button key={m.id} onClick={() => setModel(m.id)}
+              className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium border transition-all ${
+                model === m.id ? "border-violet-500/40 bg-violet-500/15 text-white" : "border-white/[0.06] text-slate-500 hover:text-slate-300"
+              }`}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1">
+          {HIGGS_DURATIONS.map((d) => (
+            <button key={d.value} onClick={() => setDuration(d.value)}
+              className={`flex flex-col items-center px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-all ${
+                duration === d.value ? "border-violet-500/40 bg-violet-500/15 text-white" : "border-white/[0.06] text-slate-500 hover:text-slate-300"
+              }`}>
+              <span>{d.label}</span>
+              <span className="text-[9px] text-slate-600">{d.credits}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Prompt */}
+      <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3}
+        className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs text-white placeholder-slate-600 outline-none focus:border-violet-500/40 transition-colors resize-none"
+      />
+
+      {state === "idle" && (
+        <button onClick={generate} disabled={!prompt.trim()}
+          className="w-full py-2.5 rounded-xl bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/30 text-xs text-violet-300 font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50">
+          <Play className="w-3.5 h-3.5" /> Генерировать видео
+        </button>
+      )}
+
+      {isLoading && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-3.5 h-3.5 text-violet-400 animate-spin" />
+            <span className="text-xs text-slate-400">Генерирую... {displayProgress}%</span>
+          </div>
+          <div className="w-full h-1.5 rounded-full bg-white/[0.06]">
+            <motion.div className="h-1.5 rounded-full bg-violet-500"
+              animate={{ width: `${Math.max(displayProgress, 5)}%` }} transition={{ duration: 0.8 }} />
+          </div>
+        </div>
+      )}
+
+      {state === "done" && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-xs text-white font-semibold">Видео готово!</span>
+          </div>
+          {videoUrl && <video src={videoUrl} controls className="w-full rounded-xl" />}
+          <div className="flex gap-2">
+            {videoUrl && (
+              <a href={videoUrl} target="_blank" rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-xs text-emerald-300 hover:bg-emerald-500/25 transition-all">
+                <ExternalLink className="w-3 h-3" /> Скачать
+              </a>
+            )}
+            <button onClick={reset}
+              className="flex-1 py-2 rounded-xl bg-white/[0.04] text-xs text-slate-500 hover:text-slate-300 transition-colors">
+              Ещё раз
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {state === "error" && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+            <span className="text-xs text-red-400">{error}</span>
+          </div>
+          <button onClick={reset} className="text-xs text-slate-500 hover:text-white transition-colors">
+            Попробовать снова
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface VideoPromptPanelProps {
   script: string;
   direction: string;
@@ -238,6 +359,7 @@ export default function VideoPromptPanel({ script, direction, topic, bgKey }: Vi
               <PromptCard item={item} scriptText={script} />
             </motion.div>
           ))}
+          <HiggsDirectGen bestPrompt={result.prompts[0]?.prompt ?? script.slice(0, 500)} />
           <button onClick={generate}
             className="w-full py-2.5 rounded-xl border border-white/[0.06] text-xs text-slate-500 hover:text-slate-300 hover:border-violet-500/25 transition-all flex items-center justify-center gap-2">
             <RefreshCw className="w-3.5 h-3.5" /> Перегенерировать промпты

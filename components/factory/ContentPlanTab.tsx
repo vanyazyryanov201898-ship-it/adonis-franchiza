@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CalendarDays, Sparkles, RefreshCw, AlertCircle } from "lucide-react";
-import { PLATFORMS, DIRECTION_DEFAULT_PLATFORMS } from "@/lib/platforms";
+import { PLATFORMS, DIRECTION_DEFAULT_PLATFORMS } from "@/lib/data/platforms";
 import { cn } from "@/lib/utils";
-import { useBgTask } from "@/lib/use-bg-task";
+import { useBgTask } from "@/lib/hooks/use-bg-task";
 
 interface ContentPlanTabProps {
   directionLabel: string;

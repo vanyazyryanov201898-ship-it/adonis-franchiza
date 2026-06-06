@@ -13,7 +13,7 @@ import RevenueChart from "@/components/dashboard/RevenueChart";
 import PlatformChart from "@/components/dashboard/PlatformChart";
 import VideoQueue from "@/components/dashboard/VideoQueue";
 import AIActivityFeed from "@/components/dashboard/AIActivityFeed";
-import { dashboardMetrics } from "@/lib/mock-data";
+import { dashboardMetrics } from "@/lib/data/mock-data";
 
 const metrics = [
   {

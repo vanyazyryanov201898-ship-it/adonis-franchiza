@@ -9,14 +9,14 @@ import {
   Activity, ArrowUpRight, AlertCircle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import { useToast } from "@/lib/toast-context";
-import { DIRECTION_DEFAULT_PLATFORMS } from "@/lib/platforms";
+import { useToast } from "@/lib/contexts/toast-context";
+import { DIRECTION_DEFAULT_PLATFORMS } from "@/lib/data/platforms";
 import {
   type Account,
   getAccountsByPlatform,
   addAccount,
   removeAccount,
-} from "@/lib/accounts-store";
+} from "@/lib/stores/accounts-store";
 
 const platforms = [
   {
