@@ -2,18 +2,18 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 
-const API_KEY = process.env.HIGGSFIELD_API_KEY;
-const BASE_URL = "https://api.higgsfield.ai";
+const CREDENTIALS = process.env.HIGGSFIELD_API_KEY;
+const BASE_URL = "https://platform.higgsfield.ai";
 
 const MODEL_MAP: Record<string, string> = {
-  kling3_0: "kling-3",
-  cinematic_studio_3_0: "cinematic-studio",
-  seedance_2_0: "seedance-2",
-  grok_video: "grok-video",
+  kling3_0: "kling3_0",
+  cinematic_studio_3_0: "cinematic_studio_3_0",
+  seedance_2_0: "seedance_2_0",
+  grok_video: "grok_video",
 };
 
 export async function POST(req: NextRequest) {
-  if (!API_KEY) {
+  if (!CREDENTIALS) {
     return NextResponse.json({ error: "HIGGSFIELD_API_KEY not configured" }, { status: 500 });
   }
 
@@ -28,39 +28,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "prompt required" }, { status: 400 });
   }
 
-  const higgsfieldModel = MODEL_MAP[model] ?? model;
+  const modelEndpoint = MODEL_MAP[model] ?? model;
 
   try {
-    const res = await fetch(`${BASE_URL}/v1/generations`, {
+    const res = await fetch(`${BASE_URL}/${modelEndpoint}`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${API_KEY}`,
+        "Authorization": `Key ${CREDENTIALS}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: higgsfieldModel,
-        prompt,
-        duration,
-        aspect_ratio,
-        enhance_prompt: true,
-        check_nsfw: false,
+        input: { prompt, duration, aspect_ratio },
       }),
     });
 
     const text = await res.text();
     let data: any;
     try { data = JSON.parse(text); } catch {
-      return NextResponse.json({ error: `Higgsfield non-JSON: ${text.slice(0, 300)}` }, { status: 500 });
+      return NextResponse.json({ error: `Higgsfield non-JSON (${res.status}): ${text.slice(0, 300)}` }, { status: 500 });
     }
 
     if (!res.ok) {
-      return NextResponse.json({ error: data?.message || data?.error || `HTTP ${res.status}` }, { status: res.status });
+      return NextResponse.json({ error: data?.message || data?.error || data?.detail || `HTTP ${res.status}` }, { status: res.status });
     }
 
-    return NextResponse.json({
-      id: data.generation_id || data.request_id || data.id,
-      status: data.status || "queued",
-    });
+    const id = data.request_id || data.id;
+    if (!id) {
+      return NextResponse.json({ error: `No request_id in response: ${JSON.stringify(data).slice(0, 200)}` }, { status: 502 });
+    }
+
+    return NextResponse.json({ id, status: data.status || "queued" });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Network error" }, { status: 500 });
   }

@@ -2,22 +2,22 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 
-const API_KEY = process.env.HIGGSFIELD_API_KEY;
-const BASE_URL = "https://api.higgsfield.ai";
+const CREDENTIALS = process.env.HIGGSFIELD_API_KEY;
+const BASE_URL = "https://platform.higgsfield.ai";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!API_KEY) {
+  if (!CREDENTIALS) {
     return NextResponse.json({ error: "HIGGSFIELD_API_KEY not configured" }, { status: 500 });
   }
 
   const { id } = params;
 
   try {
-    const res = await fetch(`${BASE_URL}/v2/requests/status/${id}`, {
-      headers: { "Authorization": `Bearer ${API_KEY}` },
+    const res = await fetch(`${BASE_URL}/requests/${id}/status`, {
+      headers: { "Authorization": `Key ${CREDENTIALS}` },
     });
 
     const text = await res.text();
@@ -27,15 +27,18 @@ export async function GET(
     }
 
     if (!res.ok) {
-      return NextResponse.json({ error: data?.message || `HTTP ${res.status}` }, { status: res.status });
+      return NextResponse.json({ error: data?.message || data?.detail || `HTTP ${res.status}` }, { status: res.status });
     }
 
-    const status: string = (data.status || "").toLowerCase();
-    const isDone = status === "completed" || status === "succeeded" || status === "done";
-    const isFailed = status === "failed" || status === "error";
+    const rawStatus: string = (data.status || "").toLowerCase();
+    const isDone   = rawStatus === "completed" || rawStatus === "succeeded";
+    const isFailed = rawStatus === "failed" || rawStatus === "error" || rawStatus === "nsfw";
 
     const videoUrl: string | null =
-      data.output_url || data.video_url || data.url ||
+      data.result_url ||
+      data.output_url ||
+      data.video_url ||
+      (data.video?.url) ||
       (Array.isArray(data.outputs) ? data.outputs[0]?.url : null) ||
       null;
 
