@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+export const maxDuration = 25;
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "@/lib/google-client";
