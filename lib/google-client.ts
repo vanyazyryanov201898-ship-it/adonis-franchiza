@@ -7,7 +7,7 @@ export async function generateText(
   options: { maxTokens?: number; model?: string; systemPrompt?: string } = {}
 ): Promise<string> {
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
+    model: options.model ?? "claude-haiku-4-5-20251001",
     max_tokens: options.maxTokens ?? 1500,
     ...(options.systemPrompt ? { system: options.systemPrompt } : {}),
     messages: [{ role: "user", content: prompt }],
