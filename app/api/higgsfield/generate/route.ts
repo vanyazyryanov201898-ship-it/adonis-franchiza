@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 
-const CREDENTIALS = process.env.HIGGSFIELD_API_KEY;
+const CREDENTIALS = process.env.HIGGSFIELD_API_KEY ?? "";
 const BASE_URL = "https://platform.higgsfield.ai";
 
 const MODEL_MAP: Record<string, string> = {
@@ -11,6 +11,15 @@ const MODEL_MAP: Record<string, string> = {
   seedance_2_0: "seedance_2_0",
   grok_video: "grok_video",
 };
+
+function getAuthHeaders() {
+  const [apiKey, apiSecret] = CREDENTIALS.split(":");
+  return {
+    "hf-api-key": apiKey ?? "",
+    "hf-secret": apiSecret ?? "",
+    "Content-Type": "application/json",
+  };
+}
 
 export async function POST(req: NextRequest) {
   if (!CREDENTIALS) {
@@ -31,14 +40,11 @@ export async function POST(req: NextRequest) {
   const modelEndpoint = MODEL_MAP[model] ?? model;
 
   try {
-    const res = await fetch(`${BASE_URL}/${modelEndpoint}`, {
+    const res = await fetch(`${BASE_URL}/v1/${modelEndpoint}`, {
       method: "POST",
-      headers: {
-        "Authorization": `Key ${CREDENTIALS}`,
-        "Content-Type": "application/json",
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
-        input: { prompt, duration, aspect_ratio },
+        params: { prompt, duration, aspect_ratio, enhance_prompt: false },
       }),
     });
 
@@ -49,12 +55,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (!res.ok) {
-      return NextResponse.json({ error: data?.message || data?.error || data?.detail || `HTTP ${res.status}` }, { status: res.status });
+      return NextResponse.json({ error: data?.message || data?.error || data?.detail || `HTTP ${res.status}: ${JSON.stringify(data).slice(0,200)}` }, { status: res.status });
     }
 
-    const id = data.request_id || data.id;
+    const id = data.id || data.request_id;
     if (!id) {
-      return NextResponse.json({ error: `No request_id in response: ${JSON.stringify(data).slice(0, 200)}` }, { status: 502 });
+      return NextResponse.json({ error: `No id in response: ${JSON.stringify(data).slice(0, 200)}` }, { status: 502 });
     }
 
     return NextResponse.json({ id, status: data.status || "queued" });

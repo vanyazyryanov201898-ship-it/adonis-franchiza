@@ -2,8 +2,16 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 
-const CREDENTIALS = process.env.HIGGSFIELD_API_KEY;
+const CREDENTIALS = process.env.HIGGSFIELD_API_KEY ?? "";
 const BASE_URL = "https://platform.higgsfield.ai";
+
+function getAuthHeaders() {
+  const [apiKey, apiSecret] = CREDENTIALS.split(":");
+  return {
+    "hf-api-key": apiKey ?? "",
+    "hf-secret": apiSecret ?? "",
+  };
+}
 
 export async function GET(
   _req: NextRequest,
@@ -16,8 +24,9 @@ export async function GET(
   const { id } = params;
 
   try {
-    const res = await fetch(`${BASE_URL}/requests/${id}/status`, {
-      headers: { "Authorization": `Key ${CREDENTIALS}` },
+    // Try v1 job-sets first (matches generate v1 endpoint)
+    const res = await fetch(`${BASE_URL}/v1/job-sets/${id}`, {
+      headers: getAuthHeaders(),
     });
 
     const text = await res.text();
@@ -30,22 +39,24 @@ export async function GET(
       return NextResponse.json({ error: data?.message || data?.detail || `HTTP ${res.status}` }, { status: res.status });
     }
 
-    const rawStatus: string = (data.status || "").toLowerCase();
+    // v1 job-set format: { id, jobs: [{status, result_url, ...}] }
+    const jobs: any[] = data.jobs ?? [];
+    const firstJob = jobs[0] ?? data;
+    const rawStatus: string = ((firstJob.status || data.status) ?? "").toLowerCase();
+
     const isDone   = rawStatus === "completed" || rawStatus === "succeeded";
-    const isFailed = rawStatus === "failed" || rawStatus === "error" || rawStatus === "nsfw";
+    const isFailed = rawStatus === "failed" || rawStatus === "error" || rawStatus === "nsfw" || rawStatus === "canceled";
 
     const videoUrl: string | null =
-      data.result_url ||
-      data.output_url ||
-      data.video_url ||
-      (data.video?.url) ||
+      firstJob.result_url || firstJob.output_url || firstJob.video_url ||
+      data.result_url || data.output_url ||
       (Array.isArray(data.outputs) ? data.outputs[0]?.url : null) ||
       null;
 
     return NextResponse.json({
       status: isDone ? "completed" : isFailed ? "failed" : "processing",
       url: isDone ? videoUrl : null,
-      progress: data.progress ?? null,
+      progress: firstJob.progress ?? data.progress ?? null,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Network error" }, { status: 500 });
