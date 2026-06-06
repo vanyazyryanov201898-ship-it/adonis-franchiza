@@ -57,7 +57,7 @@ ${ADONIS_CONTEXT}
 
 Верни ТОЛЬКО JSON.`;
 
-    const raw = (await generateText(prompt, { maxTokens: 4000 })).trim() || "{}";
+    const raw = (await generateText(prompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" })).trim() || "{}";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Некорректный ответ");
 

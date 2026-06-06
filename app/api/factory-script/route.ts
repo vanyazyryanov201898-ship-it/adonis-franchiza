@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
 
 Напиши детальный структурированный сценарий строго по формату из системного промпта. Не добавляй вступлений типа "Вот сценарий:" — сразу начинай с первого блока.`;
 
-    const content = await generateText(userPrompt, { maxTokens: 3000, systemPrompt });
+    const content = await generateText(userPrompt, { maxTokens: 1500, model: "claude-haiku-4-5-20251001", systemPrompt });
     const viralScore = Math.floor(Math.random() * 15) + 82;
 
     return NextResponse.json({ content, viralScore });

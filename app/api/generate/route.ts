@@ -286,7 +286,7 @@ ${content.slice(0, 800)}
 - positives: конкретные сильные стороны этого контента (упоминай цифры если есть)
 - improvements: конкретные рекомендации по улучшению`;
 
-    const raw = (await generateText(analysisPrompt, { maxTokens: 300 })).trim();
+    const raw = (await generateText(analysisPrompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" })).trim();
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
   } catch {}
@@ -307,7 +307,7 @@ export async function POST(req: NextRequest) {
       prompt += `\n\nВАЖНО — Голос бренда: ${brandVoice}\nПиши строго в этом стиле.`;
     }
 
-    const raw = await generateText(prompt, { maxTokens: 1500 });
+    const raw = await generateText(prompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" });
 
     let content = raw;
     let carouselData = null;

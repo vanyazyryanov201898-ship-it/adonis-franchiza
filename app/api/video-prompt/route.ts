@@ -70,7 +70,7 @@ ${instrunction}
 
 {"prompts":[{"tool":"Kling 2.0","prompt":"описание сцены на английском без внутренних кавычек","negativePrompt":"text watermark blurry distorted","duration":"10s","ratio":"9:16","tip":"совет на русском"},{"tool":"Runway Gen-3","prompt":"описание сцены на английском","camera":"slow zoom","tip":"совет на русском"},{"tool":"Sora","prompt":"детальное описание на английском","duration":"15s","tip":"совет на русском"}${templateSuffix}`;
 
-    const raw = (await generateText(userPrompt, { maxTokens: 2500, systemPrompt })).trim() || "{}";
+    const raw = (await generateText(userPrompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001", systemPrompt })).trim() || "{}";
 
     // Strip markdown code blocks if present
     const cleaned = raw

@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
 - visual_note — точное описание с hex-цветами и расположением элементов`;
 
   try {
-    const raw = await generateText(prompt, { maxTokens: 8000 });
+    const raw = await generateText(prompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" });
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {

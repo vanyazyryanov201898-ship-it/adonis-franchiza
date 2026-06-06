@@ -57,7 +57,7 @@ ${ADONIS_CONTEXT}
 - Все тексты на русском
 - Хуки должны реально цеплять — личный опыт, цифры, провокация`;
 
-    const raw = (await generateText(prompt, { maxTokens: 2000 })).trim() || "{}";
+    const raw = (await generateText(prompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" })).trim() || "{}";
 
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Claude не вернул JSON");

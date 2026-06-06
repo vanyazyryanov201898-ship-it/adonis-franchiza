@@ -175,7 +175,7 @@ ${dataBlock}
 - format: "video" или "post"
 - Всё на русском`;
 
-    const raw = await generateText(prompt, { maxTokens: 3000 });
+    const raw = await generateText(prompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" });
     const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const data = JSON.parse(jsonStr);
     data._sourceHint = isReal ? realInfo.slice(0, 300) : "";
