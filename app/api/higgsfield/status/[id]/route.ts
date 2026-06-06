@@ -1,26 +1,24 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getGoogleAccessToken } from "@/lib/google-client";
 
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT;
-const LOCATION = "us-central1";
+const API_KEY = process.env.HIGGSFIELD_API_KEY;
+const BASE_URL = "https://api.higgsfield.ai";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!API_KEY) {
+    return NextResponse.json({ error: "HIGGSFIELD_API_KEY not configured" }, { status: 500 });
+  }
+
   const { id } = params;
 
   try {
-    const token = await getGoogleAccessToken();
-
-    const res = await fetch(
-      `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/operations/${id}`,
-      {
-        headers: { "Authorization": `Bearer ${token}` },
-      }
-    );
+    const res = await fetch(`${BASE_URL}/v2/requests/status/${id}`, {
+      headers: { "Authorization": `Bearer ${API_KEY}` },
+    });
 
     const text = await res.text();
     let data: any;
@@ -29,39 +27,22 @@ export async function GET(
     }
 
     if (!res.ok) {
-      return NextResponse.json(
-        { error: data?.error?.message || `HTTP ${res.status}` },
-        { status: res.status }
-      );
+      return NextResponse.json({ error: data?.message || `HTTP ${res.status}` }, { status: res.status });
     }
 
-    if (!data.done) {
-      return NextResponse.json({
-        status: "processing",
-        progress: data.metadata?.progressPercentage ?? null,
-        raw: data,
-      });
-    }
+    const status: string = (data.status || "").toLowerCase();
+    const isDone = status === "completed" || status === "succeeded" || status === "done";
+    const isFailed = status === "failed" || status === "error";
 
-    if (data.error) {
-      return NextResponse.json({ status: "failed", error: data.error.message });
-    }
-
-    const predictions: any[] = data.response?.predictions ?? [];
-    const prediction = predictions[0] ?? {};
-
-    let videoUrl: string | null = null;
-    if (prediction.videoUri) {
-      videoUrl = prediction.videoUri;
-    } else if (prediction.bytesBase64Encoded) {
-      videoUrl = `data:video/mp4;base64,${prediction.bytesBase64Encoded}`;
-    }
+    const videoUrl: string | null =
+      data.output_url || data.video_url || data.url ||
+      (Array.isArray(data.outputs) ? data.outputs[0]?.url : null) ||
+      null;
 
     return NextResponse.json({
-      status: "completed",
-      url: videoUrl,
-      progress: null,
-      raw: data,
+      status: isDone ? "completed" : isFailed ? "failed" : "processing",
+      url: isDone ? videoUrl : null,
+      progress: data.progress ?? null,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Network error" }, { status: 500 });
