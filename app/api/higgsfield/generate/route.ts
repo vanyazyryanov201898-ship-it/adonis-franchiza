@@ -52,11 +52,12 @@ export async function POST(req: NextRequest) {
   // Use wan2_7 (audio-synchronized) when audio is provided
   const selectedModel = audio_media_id ? "wan2_7" : model;
 
-  // Build params — Higgsfield uses `medias` array (not `input_images`)
+  // Build params — Higgsfield uses `medias` array (always present, even if empty)
   const params: Record<string, unknown> = {
     prompt,
     duration,
     aspect_ratio,
+    medias: [] as unknown[],
   };
 
   // Add audio for wan2_7 lip-sync
@@ -90,9 +91,10 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const detail = Array.isArray(data?.detail)
-        ? data.detail.map((e: any) => e.msg).join("; ")
+        ? data.detail.map((e: any) => `[${(e.loc ?? []).join(".")}] ${e.msg}`).join("; ")
         : data?.detail || data?.message || data?.error;
-      return NextResponse.json({ error: detail || `HTTP ${res.status}` }, { status: res.status });
+      console.error("Higgsfield error", res.status, JSON.stringify(data));
+      return NextResponse.json({ error: detail || `HTTP ${res.status}`, _raw: data }, { status: res.status });
     }
 
     const id = data.id || data.job_set_id || data.request_id;
