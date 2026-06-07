@@ -57,11 +57,15 @@ ${ADONIS_CONTEXT}
 
 Верни ТОЛЬКО JSON.`;
 
-    const raw = (await generateText(prompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" })).trim() || "{}";
+    const raw = (await generateText(prompt, { maxTokens: 2500, model: "claude-haiku-4-5-20251001" })).trim() || "{}";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Некорректный ответ");
+    let repaired = jsonMatch[0];
+    repaired = repaired.replace(/\}(\s*)\{/g, "},$1{");
+    repaired = repaired.replace(/\](\s*)\[/g, "],$1[");
+    repaired = repaired.replace(/,(\s*[}\]])/g, "$1");
 
-    const result = JSON.parse(jsonMatch[0]);
+    const result = JSON.parse(repaired);
     return NextResponse.json(result);
   } catch (err: any) {
     console.error("Content plan error:", err);

@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const raw = await generateText(prompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" });
+    const raw = await generateText(prompt, { maxTokens: 1500, model: "claude-sonnet-4-6" });
     const repaired = repairJson(raw);
 
     let data: any;

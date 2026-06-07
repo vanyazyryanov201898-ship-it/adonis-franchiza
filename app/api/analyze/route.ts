@@ -175,9 +175,14 @@ ${dataBlock}
 - format: "video" или "post"
 - Всё на русском`;
 
-    const raw = await generateText(prompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" });
-    const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    const data = JSON.parse(jsonStr);
+    const raw = await generateText(prompt, { maxTokens: 1800, model: "claude-haiku-4-5-20251001" });
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Claude не вернул JSON");
+    let repaired = jsonMatch[0];
+    repaired = repaired.replace(/\}(\s*)\{/g, "},$1{");
+    repaired = repaired.replace(/\](\s*)\[/g, "],$1[");
+    repaired = repaired.replace(/,(\s*[}\]])/g, "$1");
+    const data = JSON.parse(repaired);
     data._sourceHint = isReal ? realInfo.slice(0, 300) : "";
     data._isRealData = isReal;
 
