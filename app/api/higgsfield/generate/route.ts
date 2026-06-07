@@ -1,14 +1,10 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { SPARTAN_CHARACTER_URL } from "@/lib/data/assets";
 
 const CREDENTIALS = process.env.HIGGSFIELD_API_KEY ?? "";
+const WORKSPACE_ID = process.env.HIGGSFIELD_WORKSPACE_ID ?? "";
 const BASE_URL = "https://platform.higgsfield.ai";
-
-function getWorkspaceId() {
-  return CREDENTIALS.split(":")[0] ?? "";
-}
 
 function getAuthHeaders() {
   return {
@@ -37,29 +33,36 @@ export async function POST(req: NextRequest) {
 
   // Use wan2_7 (audio-synchronized) when audio is provided
   const selectedModel = audio_media_id ? "wan2_7" : model;
-  const referenceImage = image_url || SPARTAN_CHARACTER_URL;
 
+  // Build params — Higgsfield uses `medias` array (not `input_images`)
   const params: Record<string, unknown> = {
     prompt,
-    input_images: [{ type: "image_url", image_url: referenceImage }],
     duration,
     aspect_ratio,
   };
 
-  // Add audio reference for wan2_7 lip-sync
+  // Add audio for wan2_7 lip-sync
   if (audio_media_id) {
-    params.medias = [{ type: "media_id", value: audio_media_id, role: "audio" }];
+    params.medias = [{ value: audio_media_id, role: "audio" }];
   }
+  // Add reference image as start_image for models that support it (Kling 3.0)
+  else if (image_url) {
+    params.medias = [{ value: image_url, role: "start_image" }];
+  }
+
+  const body: Record<string, unknown> = {
+    model: selectedModel,
+    params,
+  };
+  // workspace_id is optional — Higgsfield derives it from the API key;
+  // pass it only when explicitly configured
+  if (WORKSPACE_ID) body.workspace_id = WORKSPACE_ID;
 
   try {
     const res = await fetch(`${BASE_URL}/v1/job-sets`, {
       method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({
-        model: selectedModel,
-        workspace_id: getWorkspaceId(),
-        params,
-      }),
+      body: JSON.stringify(body),
     });
 
     const text = await res.text();

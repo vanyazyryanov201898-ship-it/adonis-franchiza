@@ -34,22 +34,31 @@ export async function GET(
     }
 
     if (!res.ok) {
-      return NextResponse.json({ error: data?.message || data?.detail || `HTTP ${res.status}`, _debug_http: res.status }, { status: res.status });
+      return NextResponse.json({
+        status: "error",
+        error: data?.message || data?.detail || `HTTP ${res.status}`,
+        _debug_http: res.status,
+      }, { status: res.status });
     }
 
-    // v1 job-set format: { id, jobs: [{status, results: {raw: {url}}, ...}] }
-    const jobs: any[] = data.jobs ?? [];
-    const firstJob = jobs[0] ?? data;
+    // Higgsfield returns a flat job-set object: { id, status, result_url, ... }
+    // Some endpoints may wrap in { jobs: [{...}] }
+    const jobs: any[] = Array.isArray(data.jobs) ? data.jobs : [];
+    const firstJob = jobs.length > 0 ? jobs[0] : data;
     const rawStatus: string = ((firstJob.status || data.status) ?? "").toLowerCase();
 
     const isDone   = rawStatus === "completed" || rawStatus === "succeeded" || rawStatus === "done";
     const isFailed = rawStatus === "failed" || rawStatus === "error" || rawStatus === "nsfw" || rawStatus === "canceled";
 
+    // Try every known URL field — Higgsfield uses result_url on flat responses
     const videoUrl: string | null =
+      data.result_url ||
+      firstJob.result_url ||
+      firstJob.results?.rawUrl ||
       firstJob.results?.raw?.url ||
       firstJob.results?.url ||
-      firstJob.result_url || firstJob.output_url || firstJob.video_url ||
-      data.result_url || data.output_url ||
+      firstJob.output_url || firstJob.video_url ||
+      data.output_url ||
       (Array.isArray(data.outputs) ? data.outputs[0]?.url : null) ||
       null;
 
@@ -57,7 +66,7 @@ export async function GET(
       status: isDone ? "completed" : isFailed ? "failed" : "processing",
       url: isDone ? videoUrl : null,
       progress: firstJob.progress ?? data.progress ?? null,
-      _debug: { rawStatus, isDone, hasUrl: !!videoUrl, jobsCount: jobs.length },
+      _debug: { rawStatus, isDone, hasUrl: !!videoUrl, jobsCount: jobs.length, topKeys: Object.keys(data) },
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Network error" }, { status: 500 });

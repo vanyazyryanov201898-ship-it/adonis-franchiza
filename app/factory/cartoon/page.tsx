@@ -212,7 +212,7 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
   const [model, setModel]       = useState("kling3_0");
   const [duration, setDuration] = useState(5);
   const hasElevenLabs           = true; // controlled by ELEVENLABS_API_KEY on server
-  const { state: renderState, videoUrl, progress, error: errorMsg, generate: runGen, reset } = useVideoGen({ direction: "cartoon", topic });
+  const { state: renderState, videoUrl, progress, error: errorMsg, debugInfo, generate: runGen, reset } = useVideoGen({ direction: "cartoon", topic });
 
   const createVideo = () => {
     if (!prompt.trim()) return;
@@ -344,6 +344,19 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
             Создать ещё
           </button>
         </motion.div>
+      )}
+
+      {renderState === "done" && !videoUrl && (
+        <div className="p-5 rounded-2xl border border-yellow-500/20 bg-yellow-900/10 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-yellow-400" />
+            <span className="text-sm text-white font-semibold">Готово, но URL не получен</span>
+          </div>
+          {debugInfo && <p className="text-xs text-slate-400 font-mono break-all">{debugInfo}</p>}
+          <button onClick={reset} className="px-4 py-2 rounded-xl bg-white/[0.06] text-sm text-white hover:bg-white/[0.1] transition-colors">
+            Попробовать снова
+          </button>
+        </div>
       )}
 
       {renderState === "error" && (
