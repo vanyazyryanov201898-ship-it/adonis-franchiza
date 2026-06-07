@@ -117,13 +117,13 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
 
       let consecutiveErrors = 0;
       const startedAt = Date.now();
-      const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes max
+      const TIMEOUT_MS = 40 * 60 * 1000; // 40 minutes max
 
       pollRef.current = setInterval(async () => {
-        // Global timeout — stop polling after 15 minutes
+        // Global timeout — stop polling after 40 minutes
         if (Date.now() - startedAt > TIMEOUT_MS) {
           stopPoll();
-          setError("Время ожидания истекло (15 мин). Попробуйте ещё раз.");
+          setError("Время ожидания истекло (40 мин). Попробуйте ещё раз.");
           setState("error");
           if (dbIdRef.current) updateInSupabase(dbIdRef.current, { status: "failed" });
           return;
