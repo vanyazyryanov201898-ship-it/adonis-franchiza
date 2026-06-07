@@ -16,6 +16,8 @@ import AutopostTab from "@/components/factory/AutopostTab";
 import VideoPromptPanel from "@/components/factory/VideoPromptPanel";
 import { useBgTask } from "@/lib/hooks/use-bg-task";
 import type { InfographicData, InfographicFrame } from "@/lib/types/infographic-types";
+import { PLATFORMS, DIRECTION_DEFAULT_PLATFORMS } from "@/lib/data/platforms";
+import { cn } from "@/lib/utils";
 
 // ─── Options ──────────────────────────────────────────────────────────────────
 
@@ -82,6 +84,7 @@ function ScriptTab({
   const [visualType, setVisual]   = useState("charts");
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
   const [copiedId, setCopiedId]   = useState<string | null>(null);
+  const [platform, setPlatform]   = useState(DIRECTION_DEFAULT_PLATFORMS["infographics"][0]);
 
   const { run, isRunning, result: data, error, clear } = useBgTask<InfographicData>("infographics-script");
   const isLoading = isRunning;
@@ -98,7 +101,7 @@ function ScriptTab({
       const res = await fetch("/api/infographic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: snap.topic, category: snap.category, visualType: snap.visualType, trendContext: snap.trend ?? undefined }),
+        body: JSON.stringify({ topic: snap.topic, category: snap.category, visualType: snap.visualType, trendContext: snap.trend ?? undefined, platform: PLATFORMS.find(p => p.id === platform)?.label }),
       });
       const text = await res.text();
       let json: any;
@@ -212,6 +215,23 @@ function ScriptTab({
           onSelect={setSelectedTrend}
           accentColor="text-cyan-400"
         />
+      </motion.div>
+
+      {/* Платформа */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.13 }}
+        className="p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Платформа</p>
+        <div className="flex flex-wrap gap-1.5">
+          {PLATFORMS.map((p) => (
+            <button key={p.id} onClick={() => setPlatform(p.id)}
+              className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                platform === p.id ? "text-white border-transparent" : "bg-white/[0.03] text-slate-500 border-white/[0.06] hover:text-slate-300")}
+              style={platform === p.id ? { backgroundColor: p.bgColor, borderColor: p.color + "60" } : {}}>
+              <span className="text-[9px] font-black" style={platform === p.id ? { color: p.color } : { color: "#64748b" }}>{p.shortLabel}</span>
+              {p.label}
+            </button>
+          ))}
+        </div>
       </motion.div>
 
       {/* Кнопка генерации */}

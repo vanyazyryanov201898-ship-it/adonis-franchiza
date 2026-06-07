@@ -147,12 +147,13 @@ type TrendContext = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { direction, topic, tone, trendContext, videoSource } = await req.json() as {
+    const { direction, topic, tone, trendContext, videoSource, platform } = await req.json() as {
       direction: Direction;
       topic: string;
       tone?: string;
       trendContext?: TrendContext;
       videoSource?: { url?: string; filename?: string };
+      platform?: string;
     };
 
     if (!directionPrompts[direction]) {
@@ -161,6 +162,7 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = directionPrompts[direction];
     const toneNote = tone ? `\nТон подачи: ${tone}` : "";
+    const platformNote = platform ? `\nЦелевая платформа: ${platform}. Адаптируй длину контента, стиль хуков и CTA под эту платформу.` : "";
 
     const trendNote = trendContext
       ? `\n\nАКТУАЛЬНЫЙ ТРЕНД (встрой в сценарий):\nТема тренда: «${trendContext.title}»\nВирусный балл: ${trendContext.viralScore}/100 · Рост: +${trendContext.growth}%\nВирусные хуки:\n${trendContext.hooks.map((h) => `— ${h}`).join("\n")}\n\nИспользуй эти хуки и тему как основу, адаптируй под АДОНИС.`
@@ -175,7 +177,7 @@ export async function POST(req: NextRequest) {
     const userPrompt = `${ADONIS_CONTEXT}
 
 Направление: ${direction}
-Тема: ${topic}${toneNote}${trendNote}${videoNote}
+Тема: ${topic}${toneNote}${platformNote}${trendNote}${videoNote}
 
 Напиши детальный структурированный сценарий строго по формату из системного промпта. Не добавляй вступлений типа "Вот сценарий:" — сразу начинай с первого блока.`;
 

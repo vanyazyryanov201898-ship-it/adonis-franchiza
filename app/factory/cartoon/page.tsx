@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, RefreshCw, Copy, Check, AlertCircle, Zap, Shield, Play, Video, ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
 import { useVideoGen } from "@/lib/hooks/use-video-gen";
@@ -11,6 +11,8 @@ import AutopostTab from "@/components/factory/AutopostTab";
 import VideoPromptPanel from "@/components/factory/VideoPromptPanel";
 import { useBgTask } from "@/lib/hooks/use-bg-task";
 import { SPARTAN_CHARACTER_URL } from "@/lib/data/assets";
+import { PLATFORMS, DIRECTION_DEFAULT_PLATFORMS } from "@/lib/data/platforms";
+import { cn } from "@/lib/utils";
 
 const suggestedTopics = [
   "Почему мерч никогда не умрёт — монолог Спартанца",
@@ -25,24 +27,30 @@ function ScriptTab({ onScriptGenerated, onGoToCreate }: { onScriptGenerated: (sc
   const [topic, setTopic]   = useState("");
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
   const [copied, setCopied] = useState(false);
+  const [platform, setPlatform] = useState(DIRECTION_DEFAULT_PLATFORMS["cartoon"][0]);
 
-  const { run, isRunning, result, error } = useBgTask<{content:string;viralScore:number}>("cartoon-script");
+  const { run, isRunning, result, error } = useBgTask<{content:string;viralScore:number;topic:string}>("cartoon-script");
   const content    = result?.content ?? null;
   const viralScore = result?.viralScore ?? null;
   const loading    = isRunning;
 
+  // Restore parent state on remount if generation completed while away
+  useEffect(() => {
+    if (result?.content) onScriptGenerated(result.content, result.topic ?? suggestedTopics[0]);
+  }, [result?.content]);
+
   const generate = () => {
     const activeTopic = topic.trim() || suggestedTopics[0];
+    const platformLabel = PLATFORMS.find(p => p.id === platform)?.label ?? "TikTok";
     run(`Спартанец · ${activeTopic.slice(0,30)}`, async () => {
       const res = await fetch("/api/factory-script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ direction: "cartoon", topic: activeTopic, trendContext: selectedTrend ?? undefined }),
+        body: JSON.stringify({ direction: "cartoon", topic: activeTopic, trendContext: selectedTrend ?? undefined, platform: platformLabel }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      onScriptGenerated(json.content, activeTopic);
-      return json as {content:string;viralScore:number};
+      return { content: json.content as string, viralScore: json.viralScore as number, topic: activeTopic };
     });
   };
 
@@ -92,6 +100,22 @@ function ScriptTab({ onScriptGenerated, onGoToCreate }: { onScriptGenerated: (sc
         onSelect={setSelectedTrend}
         accentColor="text-pink-400"
       />
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+        className="p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Платформа</p>
+        <div className="flex flex-wrap gap-1.5">
+          {PLATFORMS.map((p) => (
+            <button key={p.id} onClick={() => setPlatform(p.id)}
+              className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                platform === p.id ? "text-white border-transparent" : "bg-white/[0.03] text-slate-500 border-white/[0.06] hover:text-slate-300")}
+              style={platform === p.id ? { backgroundColor: p.bgColor, borderColor: p.color + "60" } : {}}>
+              <span className="text-[9px] font-black" style={platform === p.id ? { color: p.color } : { color: "#64748b" }}>{p.shortLabel}</span>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </motion.div>
 
       <motion.button
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}

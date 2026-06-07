@@ -13,11 +13,12 @@ type TrendContext = {
 };
 
 export async function POST(req: NextRequest) {
-  const { topic, category, visualType, trendContext } = await req.json() as {
+  const { topic, category, visualType, trendContext, platform } = await req.json() as {
     topic: string;
     category?: string;
     visualType?: string;
     trendContext?: TrendContext;
+    platform?: string;
   };
 
   if (!topic) return NextResponse.json({ error: "topic required" }, { status: 400 });
@@ -26,118 +27,39 @@ export async function POST(req: NextRequest) {
     ? `\n\nАКТУАЛЬНЫЙ ТРЕНД ДЛЯ ПРИВЯЗКИ:\nТема: «${trendContext.title}» · Балл: ${trendContext.viralScore}/100 · Рост: +${trendContext.growth}%\nХуки: ${trendContext.hooks.slice(0, 2).join(" / ")}\nИспользуй цифры тренда и его подачу в данных.`
     : "";
 
-  const prompt = `Создай детальный сценарий для видео-инфографики (30-45 сек) на тему: «${topic}».
-Формат визуала: ${visualType || "charts"}. Тип контента: ${category || "market"}.${trendNote}
+  const platformNote = platform ? ` Целевая платформа: ${platform} — адаптируй caption и хэштеги под неё.` : "";
+  const prompt = `Создай сценарий видео-инфографики на тему: «${topic}».
+Визуал: ${visualType || "charts"}. Тип: ${category || "market"}.${platformNote}${trendNote}
 
-Верни ТОЛЬКО валидный JSON без markdown:
-{
-  "title": "заголовок до 7 слов — цепляющий",
-  "subtitle": "одна строка уточнения или интриги",
-  "visual_type": "${visualType || "charts"}",
-  "frames": [
-    {
-      "n": 1,
-      "type": "cover",
-      "heading": "...",
-      "stat": "главная цифра или дата",
-      "text": "2-3 предложения — интрига, заставляет смотреть дальше",
-      "visual_note": "детальное описание: цвет фона (#hex), главный элемент, расположение текста",
-      "animation_note": "zoom in from center, text appears letter by letter",
-      "voice_over": "текст для озвучки этого кадра — разговорный стиль"
-    },
-    {
-      "n": 2,
-      "type": "data",
-      "heading": "...",
-      "stat": "цифра с единицей измерения",
-      "text": "2 предложения — контекст цифры, почему это важно",
-      "visual_note": "тип графика/диаграммы, цветовая схема, акцент на главном числе",
-      "animation_note": "bar chart grows from left to right, number counts up",
-      "voice_over": "..."
-    },
-    {
-      "n": 3,
-      "type": "data",
-      "heading": "...",
-      "stat": "...",
-      "text": "...",
-      "visual_note": "...",
-      "animation_note": "slide in from right, icon bounces",
-      "voice_over": "..."
-    },
-    {
-      "n": 4,
-      "type": "data",
-      "heading": "...",
-      "stat": "...",
-      "text": "...",
-      "visual_note": "...",
-      "animation_note": "...",
-      "voice_over": "..."
-    },
-    {
-      "n": 5,
-      "type": "process",
-      "heading": "Как это работает",
-      "stat": null,
-      "text": "2-3 шага или этапа процесса — кратко",
-      "visual_note": "три иконки с стрелками, горизонтальный флоу",
-      "animation_note": "each step appears with a delay of 0.5s",
-      "voice_over": "..."
-    },
-    {
-      "n": 6,
-      "type": "insight",
-      "heading": "Главный вывод",
-      "stat": "итоговая или сравнительная цифра",
-      "text": "2 предложения — ключевой инсайт, который удивит зрителя",
-      "visual_note": "яркий акцентный цвет, крупный текст, минимум элементов",
-      "animation_note": "scale up from 0, glow effect on stat",
-      "voice_over": "..."
-    },
-    {
-      "n": 7,
-      "type": "insight",
-      "heading": "Что это значит для тебя",
-      "stat": null,
-      "text": "персональная релевантность — как этот тренд влияет на конкретного зрителя",
-      "visual_note": "человек / иконка персонажа, тёплые цвета",
-      "animation_note": "fade in with slight upward motion",
-      "voice_over": "..."
-    },
-    {
-      "n": 8,
-      "type": "cta",
-      "heading": "Что делать прямо сейчас",
-      "stat": null,
-      "text": "конкретный призыв — сохрани, поделись, напиши нам",
-      "visual_note": "логотип АДОНИС, контактный элемент, тёмный фон",
-      "animation_note": "logo pulse, arrow points to DM button",
-      "voice_over": "Сохраняй, чтобы не потерять. Если хочешь узнать больше — пиши нам."
-    }
-  ],
-  "hashtags": "#инфографика #бизнес #мерч #франшиза и ещё 8-10 по теме",
-  "caption": "2-3 живых предложения для подписи — от первого лица, с вопросом к аудитории",
-  "music_suggestion": "темп BPM примерно, настроение, жанр",
-  "total_duration": "35 сек",
-  "voice_style": "уверенный мужской голос, разговорный темп, паузы между кадрами 0.3 сек"
-}
+Верни ТОЛЬКО валидный JSON (без markdown, без пояснений):
+{"title":"заголовок до 7 слов","subtitle":"одна строка-интрига","visual_type":"${visualType || "charts"}","frames":[{"n":1,"type":"cover","heading":"...","stat":"ключевая цифра","text":"2 предложения — зачем смотреть дальше","visual_note":"цвет фона, главный элемент"},{"n":2,"type":"data","heading":"...","stat":"цифра с единицей","text":"2 предложения — контекст цифры","visual_note":"тип графика, цветовая схема"},{"n":3,"type":"data","heading":"...","stat":"...","text":"...","visual_note":"..."},{"n":4,"type":"data","heading":"...","stat":"...","text":"...","visual_note":"..."},{"n":5,"type":"insight","heading":"Главный вывод","stat":"итоговая цифра","text":"2 предложения — ключевой инсайт","visual_note":"яркий акцент, крупный текст"},{"n":6,"type":"cta","heading":"Что делать","stat":null,"text":"конкретный призыв — сохрани, напиши нам","visual_note":"логотип АДОНИС, тёмный фон"}],"hashtags":"#инфографика #бизнес #мерч #франшиза + 6-8 по теме","caption":"2-3 предложения от первого лица с вопросом к аудитории","music_suggestion":"темп и настроение"}
 
-Требования:
-- Все цифры реальные и конкретные (не 'X миллионов', а '16 млн руб')
-- voice_over каждого кадра — разговорный, не рекламный, как будто объясняет другу
-- animation_note — конкретные технические инструкции для After Effects / motion designer
-- visual_note — точное описание с hex-цветами и расположением элементов`;
+Правила: цифры конкретные (не 'X млн', а '16 млн руб'). Только валидный JSON.`;
+
+  function repairJson(raw: string): string {
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return raw;
+    let s = m[0];
+    // Add missing comma between } { (Haiku sometimes forgets between array items)
+    s = s.replace(/\}(\s*)\{/g, "},$1{");
+    // Add missing comma between ] [
+    s = s.replace(/\](\s*)\[/g, "],$1[");
+    // Remove trailing commas before } or ]
+    s = s.replace(/,(\s*[}\]])/g, "$1");
+    return s;
+  }
 
   try {
     const raw = await generateText(prompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" });
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const repaired = repairJson(raw);
 
-    if (!jsonMatch) {
-      return NextResponse.json({ error: "Не удалось распарсить JSON от модели" }, { status: 500 });
+    let data: any;
+    try {
+      data = JSON.parse(repaired);
+    } catch {
+      return NextResponse.json({ error: "Не удалось распарсить JSON от модели. Попробуй ещё раз." }, { status: 500 });
     }
 
-    const data = JSON.parse(jsonMatch[0]);
     return NextResponse.json(data);
   } catch (err: any) {
     console.error("Infographic API error:", err);

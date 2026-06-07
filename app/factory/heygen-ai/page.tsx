@@ -9,6 +9,8 @@ import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelec
 import AutopostTab from "@/components/factory/AutopostTab";
 import { useBgTask } from "@/lib/hooks/use-bg-task";
 import { ExternalLink } from "lucide-react";
+import { PLATFORMS, DIRECTION_DEFAULT_PLATFORMS } from "@/lib/data/platforms";
+import { cn } from "@/lib/utils";
 
 const suggestedTopics = [
   "Франшиза без большого капитала — как это возможно",
@@ -23,6 +25,7 @@ function ScriptTab() {
   const [topic, setTopic]   = useState("");
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
   const [copied, setCopied] = useState(false);
+  const [platform, setPlatform] = useState(DIRECTION_DEFAULT_PLATFORMS["heygen-ai"][0]);
 
   const { run, isRunning, result, error } = useBgTask<{content:string;viralScore:number}>("heygen-ai-script");
   const content    = result?.content ?? null;
@@ -35,7 +38,7 @@ function ScriptTab() {
       const res = await fetch("/api/factory-script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ direction: "heygen-ai", topic: activeTopic, trendContext: selectedTrend ?? undefined }),
+        body: JSON.stringify({ direction: "heygen-ai", topic: activeTopic, trendContext: selectedTrend ?? undefined, platform: PLATFORMS.find(p => p.id === platform)?.label }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
@@ -81,6 +84,21 @@ function ScriptTab() {
         onSelect={setSelectedTrend}
         accentColor="text-violet-400"
       />
+
+      <div className="p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Платформа</p>
+        <div className="flex flex-wrap gap-1.5">
+          {PLATFORMS.map((p) => (
+            <button key={p.id} onClick={() => setPlatform(p.id)}
+              className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                platform === p.id ? "text-white border-transparent" : "bg-white/[0.03] text-slate-500 border-white/[0.06] hover:text-slate-300")}
+              style={platform === p.id ? { backgroundColor: p.bgColor, borderColor: p.color + "60" } : {}}>
+              <span className="text-[9px] font-black" style={platform === p.id ? { color: p.color } : { color: "#64748b" }}>{p.shortLabel}</span>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <motion.button
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
