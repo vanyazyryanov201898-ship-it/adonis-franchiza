@@ -556,7 +556,10 @@ function CreateVideoTab({ infographicData }: { infographicData: InfographicData 
             <motion.div className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"
               animate={{ width: `${Math.max(progress, 5)}%` }} transition={{ duration: 0.8 }} />
           </div>
-          <p className="text-xs text-slate-500">Higgsfield AI рендерит — обычно 1–3 минуты</p>
+          <p className="text-xs text-slate-500">Higgsfield AI рендерит — обычно 3–10 минут</p>
+          <button onClick={reset} className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors underline">
+            Отменить и начать заново
+          </button>
         </div>
       )}
 
