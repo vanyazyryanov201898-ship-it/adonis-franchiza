@@ -25,18 +25,18 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
   const [progress, setProgress]   = useState(0);
   const [error, setError]         = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
-  const pollRef                   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const esRef                     = useRef<EventSource | null>(null);
   const dbIdRef                   = useRef<string | null>(null);
 
-  const stopPoll = () => {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  const stopStream = () => {
+    if (esRef.current) { esRef.current.close(); esRef.current = null; }
   };
 
   useEffect(() => {
-    return () => { stopPoll(); };
+    return () => { stopStream(); };
   }, []);
 
-  // Auto-resume polling if there's an active job stored (user navigated away and came back)
+  // Auto-resume if there's an active job stored for this direction
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -44,14 +44,14 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
       const job: StoredJob = JSON.parse(stored);
       if (job.direction !== direction) return;
       const age = Date.now() - job.startedAt;
-      if (age > 40 * 60 * 1000) {
+      if (age > 15 * 60 * 1000) { // 15 min matches server cap
         localStorage.removeItem(STORAGE_KEY);
         return;
       }
       dbIdRef.current = job.dbId;
       setState("polling");
-      setProgress(Math.min(5 + Math.floor(age / 4000) * 2, 88));
-      startPolling(job.higgsId, job.dbId, job.startedAt);
+      setProgress(Math.min(10 + Math.floor(age / 2000), 95));
+      startStream(job.higgsId, job.dbId);
     } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [direction]);
@@ -73,76 +73,58 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
     } catch {}
   };
 
-  const startPolling = (higgsId: string, dbId: string | null, startedAt: number) => {
-    stopPoll();
+  const startStream = (higgsId: string, dbId: string | null) => {
+    stopStream();
 
-    const TIMEOUT_MS = 40 * 60 * 1000;
-    let consecutiveErrors = 0;
+    // Animate progress smoothly up to 95% while waiting
+    let prog = 10;
+    const ticker = setInterval(() => {
+      prog = Math.min(prog + 1, 95);
+      setProgress(prog);
+    }, 2_000);
 
-    pollRef.current = setInterval(async () => {
-      if (Date.now() - startedAt > TIMEOUT_MS) {
-        stopPoll();
-        localStorage.removeItem(STORAGE_KEY);
-        setError("Время ожидания истекло (40 мин). Попробуйте ещё раз.");
-        setState("error");
-        if (dbIdRef.current) updateInSupabase(dbIdRef.current, { status: "failed" });
-        return;
-      }
+    const es = new EventSource(`/api/higgsfield/stream/${higgsId}`);
+    esRef.current = es;
 
+    es.onmessage = (e) => {
       try {
-        const sr = await fetch(`/api/higgsfield/status/${higgsId}`);
-        const sd = await sr.json();
+        const msg = JSON.parse(e.data) as { status: string; url?: string; error?: string };
 
-        // HTTP errors (4xx/5xx) from the status endpoint — count as consecutive errors
-        if (!sr.ok) {
-          consecutiveErrors++;
-          setDebugInfo(`Статус-API ошибка HTTP ${sr.status}: ${sd.error || "unknown"}`);
-          if (consecutiveErrors >= 5) {
-            stopPoll();
-            localStorage.removeItem(STORAGE_KEY);
-            setError(`Ошибка опроса статуса (HTTP ${sr.status}): ${sd.error || "Проверьте ключ Higgsfield"}`);
-            setState("error");
-            if (dbIdRef.current) updateInSupabase(dbIdRef.current, { status: "failed" });
-          }
-          return;
-        }
-
-        consecutiveErrors = 0;
-
-        if (sd.status === "completed") {
-          stopPoll();
+        if (msg.status === "completed") {
+          clearInterval(ticker);
+          stopStream();
           localStorage.removeItem(STORAGE_KEY);
-          const url = sd.url ?? null;
+          setProgress(100);
+          const url = msg.url ?? null;
           setVideoUrl(url);
           setState("done");
           if (!url) {
-            setDebugInfo(`Видео завершено, но URL не получен. Debug: ${JSON.stringify(sd._debug)}`);
+            setDebugInfo("Видео готово, но URL не получен. Проверьте историю на дашборде.");
           }
           if (dbId) updateInSupabase(dbId, {
             status: "completed",
             video_url: url,
             completed_at: new Date().toISOString(),
           });
-        } else if (sd.status === "failed" || sd.status === "error" || sd.error) {
-          stopPoll();
+        } else if (msg.status === "failed") {
+          clearInterval(ticker);
+          stopStream();
           localStorage.removeItem(STORAGE_KEY);
-          setError(sd.error || "Ошибка рендера на Higgsfield");
+          setError(msg.error || "Ошибка рендера на Higgsfield");
           setState("error");
           if (dbId) updateInSupabase(dbId, { status: "failed" });
-        } else {
-          setProgress((p) => Math.min(p + 2, 88));
         }
-      } catch {
-        consecutiveErrors++;
-        if (consecutiveErrors >= 5) {
-          stopPoll();
-          localStorage.removeItem(STORAGE_KEY);
-          setError("Потеряно соединение с сервером. Обновите страницу.");
-          setState("error");
-          if (dbIdRef.current) updateInSupabase(dbIdRef.current, { status: "failed" });
-        }
-      }
-    }, 4000);
+        // "processing" — just a heartbeat, progress ticker handles the bar
+      } catch {}
+    };
+
+    es.onerror = () => {
+      // SSE connection dropped — this is normal after completion (server closes)
+      // Only treat as error if we're still in polling state
+      clearInterval(ticker);
+      stopStream();
+      // Don't mark as error here — the server might have sent "completed" before closing
+    };
   };
 
   const generate = async ({
@@ -157,7 +139,7 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
   }) => {
     if (!prompt.trim()) return;
 
-    stopPoll();
+    stopStream();
     localStorage.removeItem(STORAGE_KEY);
 
     setState("submitting");
@@ -188,7 +170,7 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
         } catch { /* continue without audio */ }
       }
 
-      const res = await fetch("/api/higgsfield/generate", {
+      const res  = await fetch("/api/higgsfield/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, model, duration, aspect_ratio, image_url, audio_media_id }),
@@ -212,14 +194,13 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
 
       if (dbId) updateInSupabase(dbId, { higgs_id: higgsId, status: "processing" });
 
-      const startedAt = Date.now();
-      const storedJob: StoredJob = { higgsId, dbId, direction, startedAt };
+      const storedJob: StoredJob = { higgsId, dbId, direction, startedAt: Date.now() };
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(storedJob)); } catch {}
 
       setState("polling");
       setProgress(5);
 
-      startPolling(higgsId, dbId, startedAt);
+      startStream(higgsId, dbId);
     } catch (e: any) {
       setError(e.message || "Ошибка сети");
       setState("error");
@@ -228,7 +209,7 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
   };
 
   const reset = () => {
-    stopPoll();
+    stopStream();
     localStorage.removeItem(STORAGE_KEY);
     setState("idle");
     setVideoUrl(null);
