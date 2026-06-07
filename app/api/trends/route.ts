@@ -57,12 +57,17 @@ ${ADONIS_CONTEXT}
 - Все тексты на русском
 - Хуки должны реально цеплять — личный опыт, цифры, провокация`;
 
-    const raw = (await generateText(prompt, { maxTokens: 1200, model: "claude-haiku-4-5-20251001" })).trim() || "{}";
+    const raw = (await generateText(prompt, { maxTokens: 1800, model: "claude-haiku-4-5-20251001" })).trim() || "{}";
 
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Claude не вернул JSON");
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    let repaired = jsonMatch[0];
+    repaired = repaired.replace(/\}(\s*)\{/g, "},$1{");
+    repaired = repaired.replace(/\](\s*)\[/g, "],$1[");
+    repaired = repaired.replace(/,(\s*[}\]])/g, "$1");
+
+    const parsed = JSON.parse(repaired);
     if (!parsed.topics || !Array.isArray(parsed.topics)) throw new Error("Неверная структура ответа");
 
     return NextResponse.json({ topics: parsed.topics });
