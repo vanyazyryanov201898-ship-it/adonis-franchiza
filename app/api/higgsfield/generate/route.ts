@@ -52,21 +52,22 @@ export async function POST(req: NextRequest) {
   // Use wan2_7 (audio-synchronized) when audio is provided
   const selectedModel = audio_media_id ? "wan2_7" : model;
 
-  // Build params — Higgsfield uses `medias` array (always present, even if empty)
+  // input_images is REQUIRED by Higgsfield /v1/job-sets.
+  // Pass the reference image when provided, otherwise empty array (text-to-video mode).
+  const inputImages: unknown[] = image_url
+    ? [{ type: "image_url", image_url }]
+    : [];
+
   const params: Record<string, unknown> = {
     prompt,
     duration,
     aspect_ratio,
-    medias: [] as unknown[],
+    input_images: inputImages,
   };
 
   // Add audio for wan2_7 lip-sync
   if (audio_media_id) {
     params.medias = [{ value: audio_media_id, role: "audio" }];
-  }
-  // Add reference image as start_image for models that support it (Kling 3.0)
-  else if (image_url) {
-    params.medias = [{ value: image_url, role: "start_image" }];
   }
 
   const workspaceId = await resolveWorkspaceId();
