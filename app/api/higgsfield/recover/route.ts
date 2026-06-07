@@ -14,8 +14,8 @@ export async function GET() {
 
   const { data: stale, error: dbErr } = await sb
     .from("video_generations")
-    .select("id, higgs_id")
-    .in("status", ["processing", "queued"])
+    .select("id, higgs_id, status")
+    .in("status", ["processing", "queued", "failed"])
     .not("higgs_id", "is", null);
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });

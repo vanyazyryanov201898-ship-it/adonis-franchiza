@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Play, CheckCircle2, Clock, Loader2, Video, Zap, XCircle, ExternalLink } from "lucide-react";
-import { getSupabase } from "@/lib/db/supabase";
 import { cn } from "@/lib/utils";
 
 interface VideoRecord {
@@ -43,14 +42,9 @@ export default function VideoQueue() {
 
   const fetchVideos = useCallback(async () => {
     try {
-      const sb = getSupabase();
-      if (!sb) { setLoading(false); return; }
-      const { data } = await sb
-        .from("video_generations")
-        .select("id,direction,topic,prompt,model,duration_sec,status,video_url,created_at,completed_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (data) setVideos(data as VideoRecord[]);
+      const res = await fetch("/api/videos");
+      const json = await res.json();
+      if (json.videos) setVideos(json.videos as VideoRecord[]);
     } catch {}
     setLoading(false);
   }, []);
