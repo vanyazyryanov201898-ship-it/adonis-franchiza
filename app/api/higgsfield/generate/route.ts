@@ -12,7 +12,8 @@ function getAuthHeaders() {
   };
 }
 
-// Cache workspace_id so we don't fetch it on every request
+// Workspace ID — tied to the Higgsfield account
+const FALLBACK_WORKSPACE_ID = "40e3dc18-a260-4432-87d5-ebc004e59b54";
 let _workspaceId: string | null = process.env.HIGGSFIELD_WORKSPACE_ID || null;
 
 async function resolveWorkspaceId(): Promise<string> {
@@ -21,13 +22,13 @@ async function resolveWorkspaceId(): Promise<string> {
     const res = await fetch(`${BASE_URL}/v1/workspaces`, { headers: getAuthHeaders() });
     if (res.ok) {
       const json = await res.json();
-      // Response can be array or { data: [...] } or { workspaces: [...] }
       const list: any[] = Array.isArray(json) ? json : (json.data ?? json.workspaces ?? []);
       const id: string | undefined = list[0]?.id;
       if (id) { _workspaceId = id; return id; }
     }
   } catch {}
-  return "";
+  _workspaceId = FALLBACK_WORKSPACE_ID;
+  return FALLBACK_WORKSPACE_ID;
 }
 
 export async function POST(req: NextRequest) {
