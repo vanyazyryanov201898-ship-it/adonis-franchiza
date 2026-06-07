@@ -97,8 +97,19 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
       setProgress(5);
 
       let consecutiveErrors = 0;
+      const startedAt = Date.now();
+      const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes max
 
       pollRef.current = setInterval(async () => {
+        // Global timeout — stop polling after 15 minutes
+        if (Date.now() - startedAt > TIMEOUT_MS) {
+          stopPoll();
+          setError("Время ожидания истекло (15 мин). Попробуйте ещё раз.");
+          setState("error");
+          if (dbIdRef.current) updateInSupabase(dbIdRef.current, { status: "failed" });
+          return;
+        }
+
         try {
           const sr = await fetch(`/api/higgsfield/status/${higgsId}`);
           const sd = await sr.json();
@@ -114,17 +125,17 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
               video_url: sd.url ?? null,
               completed_at: new Date().toISOString(),
             });
-          } else if (sd.status === "failed") {
+          } else if (sd.status === "failed" || sd.error) {
             stopPoll();
-            setError(sd.error || "Ошибка рендера");
+            setError(sd.error || "Ошибка рендера на Higgsfield");
             setState("error");
             if (dbId) updateInSupabase(dbId, { status: "failed" });
           } else {
-            setProgress((p) => Math.min(p + 3, 90));
+            setProgress((p) => Math.min(p + 2, 88));
           }
         } catch {
           consecutiveErrors++;
-          if (consecutiveErrors >= 3) {
+          if (consecutiveErrors >= 5) {
             stopPoll();
             setError("Потеряно соединение. Попробуйте обновить страницу.");
             setState("error");

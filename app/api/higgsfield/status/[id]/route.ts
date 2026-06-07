@@ -34,7 +34,7 @@ export async function GET(
     }
 
     if (!res.ok) {
-      return NextResponse.json({ error: data?.message || data?.detail || `HTTP ${res.status}` }, { status: res.status });
+      return NextResponse.json({ error: data?.message || data?.detail || `HTTP ${res.status}`, _debug_http: res.status }, { status: res.status });
     }
 
     // v1 job-set format: { id, jobs: [{status, results: {raw: {url}}, ...}] }
@@ -57,6 +57,7 @@ export async function GET(
       status: isDone ? "completed" : isFailed ? "failed" : "processing",
       url: isDone ? videoUrl : null,
       progress: firstJob.progress ?? data.progress ?? null,
+      _debug: { rawStatus, isDone, hasUrl: !!videoUrl, jobsCount: jobs.length },
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Network error" }, { status: 500 });
