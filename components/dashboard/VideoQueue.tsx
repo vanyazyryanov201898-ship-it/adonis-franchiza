@@ -56,8 +56,9 @@ export default function VideoQueue() {
   }, []);
 
   useEffect(() => {
+    // Recover stale "processing" records from Higgsfield before first fetch
+    fetch("/api/higgsfield/recover").catch(() => {});
     fetchVideos();
-    // Auto-refresh every 15 sec to pick up status changes
     const interval = setInterval(fetchVideos, 15_000);
     return () => clearInterval(interval);
   }, [fetchVideos]);
