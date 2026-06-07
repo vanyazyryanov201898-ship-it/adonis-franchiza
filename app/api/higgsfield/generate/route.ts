@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 
 const CREDENTIALS = process.env.HIGGSFIELD_API_KEY ?? "";
-const WORKSPACE_ID = process.env.HIGGSFIELD_WORKSPACE_ID ?? "";
 const BASE_URL = "https://platform.higgsfield.ai";
 
 function getAuthHeaders() {
@@ -11,6 +10,24 @@ function getAuthHeaders() {
     "Authorization": `Key ${CREDENTIALS}`,
     "Content-Type": "application/json",
   };
+}
+
+// Cache workspace_id so we don't fetch it on every request
+let _workspaceId: string | null = process.env.HIGGSFIELD_WORKSPACE_ID || null;
+
+async function resolveWorkspaceId(): Promise<string> {
+  if (_workspaceId) return _workspaceId;
+  try {
+    const res = await fetch(`${BASE_URL}/v1/workspaces`, { headers: getAuthHeaders() });
+    if (res.ok) {
+      const json = await res.json();
+      // Response can be array or { data: [...] } or { workspaces: [...] }
+      const list: any[] = Array.isArray(json) ? json : (json.data ?? json.workspaces ?? []);
+      const id: string | undefined = list[0]?.id;
+      if (id) { _workspaceId = id; return id; }
+    }
+  } catch {}
+  return "";
 }
 
 export async function POST(req: NextRequest) {
@@ -50,13 +67,12 @@ export async function POST(req: NextRequest) {
     params.medias = [{ value: image_url, role: "start_image" }];
   }
 
+  const workspaceId = await resolveWorkspaceId();
   const body: Record<string, unknown> = {
     model: selectedModel,
+    workspace_id: workspaceId,
     params,
   };
-  // workspace_id is optional — Higgsfield derives it from the API key;
-  // pass it only when explicitly configured
-  if (WORKSPACE_ID) body.workspace_id = WORKSPACE_ID;
 
   try {
     const res = await fetch(`${BASE_URL}/v1/job-sets`, {
