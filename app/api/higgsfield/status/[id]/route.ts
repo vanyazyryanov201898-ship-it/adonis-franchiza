@@ -6,10 +6,8 @@ const CREDENTIALS = process.env.HIGGSFIELD_API_KEY ?? "";
 const BASE_URL = "https://platform.higgsfield.ai";
 
 function getAuthHeaders() {
-  const [apiKey, apiSecret] = CREDENTIALS.split(":");
   return {
-    "hf-api-key": apiKey ?? "",
-    "hf-secret": apiSecret ?? "",
+    "Authorization": `Key ${CREDENTIALS}`,
   };
 }
 
@@ -39,15 +37,17 @@ export async function GET(
       return NextResponse.json({ error: data?.message || data?.detail || `HTTP ${res.status}` }, { status: res.status });
     }
 
-    // v1 job-set format: { id, jobs: [{status, result_url, ...}] }
+    // v1 job-set format: { id, jobs: [{status, results: {raw: {url}}, ...}] }
     const jobs: any[] = data.jobs ?? [];
     const firstJob = jobs[0] ?? data;
     const rawStatus: string = ((firstJob.status || data.status) ?? "").toLowerCase();
 
-    const isDone   = rawStatus === "completed" || rawStatus === "succeeded";
+    const isDone   = rawStatus === "completed" || rawStatus === "succeeded" || rawStatus === "done";
     const isFailed = rawStatus === "failed" || rawStatus === "error" || rawStatus === "nsfw" || rawStatus === "canceled";
 
     const videoUrl: string | null =
+      firstJob.results?.raw?.url ||
+      firstJob.results?.url ||
       firstJob.result_url || firstJob.output_url || firstJob.video_url ||
       data.result_url || data.output_url ||
       (Array.isArray(data.outputs) ? data.outputs[0]?.url : null) ||

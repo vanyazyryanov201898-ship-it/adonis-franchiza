@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 
-const CREDENTIALS = process.env.HIGGSFIELD_API_KEY;
+const CREDENTIALS = process.env.HIGGSFIELD_API_KEY ?? "";
 const BASE_URL = "https://platform.higgsfield.ai";
 
 export async function GET() {
@@ -11,16 +11,27 @@ export async function GET() {
   }
 
   try {
-    const res = await fetch(`${BASE_URL}/credits`, {
-      headers: { "Authorization": `Key ${CREDENTIALS}` },
+    const workspaceId = CREDENTIALS.split(":")[0];
+    const res = await fetch(`${BASE_URL}/v1/job-sets`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Key ${CREDENTIALS}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "kling3_0",
+        workspace_id: workspaceId,
+        params: { prompt: "balance_check", input_images: [], duration: 1, aspect_ratio: "1:1" },
+        dry_run: true,
+      }),
     });
 
-    if (!res.ok) {
-      return NextResponse.json({ credits: null, error: `HTTP ${res.status}` });
+    // If auth works (even if endpoint errors), we know key is valid
+    if (res.status === 401 || res.status === 403) {
+      return NextResponse.json({ credits: null, error: "Invalid API key" });
     }
 
-    const data = await res.json();
-    return NextResponse.json({ credits: data.credits ?? data.balance ?? null });
+    return NextResponse.json({ credits: "OK" });
   } catch (err: any) {
     return NextResponse.json({ credits: null, error: err.message });
   }

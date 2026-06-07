@@ -5,18 +5,16 @@ import { NextRequest, NextResponse } from "next/server";
 const CREDENTIALS = process.env.HIGGSFIELD_API_KEY ?? "";
 const BASE_URL = "https://platform.higgsfield.ai";
 
-const MODEL_MAP: Record<string, string> = {
-  kling3_0: "kling3_0",
-  cinematic_studio_3_0: "cinematic_studio_3_0",
-  seedance_2_0: "seedance_2_0",
-  grok_video: "grok_video",
-};
+// Dark cinematic placeholder used when no reference image is provided
+const DEFAULT_IMAGE = "https://picsum.photos/seed/adonis/576/1024";
+
+function getWorkspaceId() {
+  return CREDENTIALS.split(":")[0] ?? "";
+}
 
 function getAuthHeaders() {
-  const [apiKey, apiSecret] = CREDENTIALS.split(":");
   return {
-    "hf-api-key": apiKey ?? "",
-    "hf-secret": apiSecret ?? "",
+    "Authorization": `Key ${CREDENTIALS}`,
     "Content-Type": "application/json",
   };
 }
@@ -26,25 +24,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "HIGGSFIELD_API_KEY not configured" }, { status: 500 });
   }
 
-  const { prompt, model = "kling3_0", duration = 5, aspect_ratio = "9:16" } = await req.json() as {
+  const { prompt, model = "kling3_0", duration = 5, aspect_ratio = "9:16", image_url } = await req.json() as {
     prompt: string;
     model?: string;
     duration?: number;
     aspect_ratio?: string;
+    image_url?: string;
   };
 
   if (!prompt) {
     return NextResponse.json({ error: "prompt required" }, { status: 400 });
   }
 
-  const modelEndpoint = MODEL_MAP[model] ?? model;
-
   try {
-    const res = await fetch(`${BASE_URL}/v1/${modelEndpoint}`, {
+    const res = await fetch(`${BASE_URL}/v1/job-sets`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        params: { prompt, duration, aspect_ratio, enhance_prompt: false },
+        model,
+        workspace_id: getWorkspaceId(),
+        params: {
+          prompt,
+          input_images: [{ type: "image_url", image_url: image_url || DEFAULT_IMAGE }],
+          duration,
+          aspect_ratio,
+        },
       }),
     });
 
@@ -55,10 +59,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!res.ok) {
-      return NextResponse.json({ error: data?.message || data?.error || data?.detail || `HTTP ${res.status}: ${JSON.stringify(data).slice(0,200)}` }, { status: res.status });
+      const detail = Array.isArray(data?.detail)
+        ? data.detail.map((e: any) => e.msg).join("; ")
+        : data?.detail || data?.message || data?.error;
+      return NextResponse.json({ error: detail || `HTTP ${res.status}` }, { status: res.status });
     }
 
-    const id = data.id || data.request_id;
+    const id = data.id || data.job_set_id || data.request_id;
     if (!id) {
       return NextResponse.json({ error: `No id in response: ${JSON.stringify(data).slice(0, 200)}` }, { status: 502 });
     }
