@@ -1,11 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 export async function generateText(
   prompt: string,
   options: { maxTokens?: number; model?: string; systemPrompt?: string } = {}
 ): Promise<string> {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await anthropic.messages.create({
     model: options.model ?? "claude-haiku-4-5-20251001",
     max_tokens: options.maxTokens ?? 1500,
