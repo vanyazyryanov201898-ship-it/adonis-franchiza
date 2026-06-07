@@ -45,12 +45,14 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
   };
 
   const generate = async ({
-    prompt, model, duration, aspect_ratio = "9:16",
+    prompt, model, duration, aspect_ratio = "9:16", image_url, audio_text,
   }: {
     prompt: string;
     model: string;
     duration: number;
     aspect_ratio?: string;
+    image_url?: string;
+    audio_text?: string;
   }) => {
     if (!prompt.trim()) return;
 
@@ -69,10 +71,27 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
     dbIdRef.current = dbId;
 
     try {
+      // If audio_text provided — prepare audio first, then generate with it
+      let audio_media_id: string | undefined;
+      if (audio_text?.trim()) {
+        try {
+          const audioRes = await fetch("/api/higgsfield/audio-prepare", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: audio_text }),
+          });
+          const audioData = await audioRes.json();
+          if (audioRes.ok && audioData.media_id) {
+            audio_media_id = audioData.media_id;
+          }
+          // If audio fails — continue without it (no blocking)
+        } catch { /* continue without audio */ }
+      }
+
       const res = await fetch("/api/higgsfield/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, model, duration, aspect_ratio }),
+        body: JSON.stringify({ prompt, model, duration, aspect_ratio, image_url, audio_media_id }),
       });
       const data = await res.json();
 

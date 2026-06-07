@@ -10,6 +10,7 @@ import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelec
 import AutopostTab from "@/components/factory/AutopostTab";
 import VideoPromptPanel from "@/components/factory/VideoPromptPanel";
 import { useBgTask } from "@/lib/hooks/use-bg-task";
+import { SPARTAN_CHARACTER_URL } from "@/lib/data/assets";
 
 const suggestedTopics = [
   "Почему мерч никогда не умрёт — монолог Спартанца",
@@ -166,19 +167,39 @@ const CARTOON_MODELS = [
   { id: "grok_video",           label: "Grok Imagine",      desc: "xAI · text-to-video · аудио" },
 ];
 
+function extractDialogue(script: string | null): string {
+  if (!script) return "";
+  const lines = script.split("\n");
+  const replicas = lines
+    .filter((l) => l.includes("Реплика:") || l.includes("реплика:"))
+    .map((l) => l.replace(/.*[Рр]еплика:\s*["«]?/, "").replace(/["»]?\s*$/, "").trim())
+    .filter(Boolean);
+  return replicas.join(" ");
+}
+
+function buildPrompt(topic: string, script: string | null): string {
+  const sceneDesc = script ? script.slice(0, 400) : `Topic: "${topic}"`;
+  return `Cartoon animation of ADONIS Spartan warrior mascot. Character: small energetic spartan in golden helmet with red plume, bold "ADONIS" text logo on chest armor plate, golden and dark-red colors. Background: professional merch printing workshop — large DTF printer, sewing machines, branded hoodies on hangers, inkjet printing equipment, busy production studio. Scene: ${sceneDesc}. Style: 2D Pixar-like flat cartoon animation, vibrant colors, dynamic movement, clean outlines. Audio: teenage Russian male voice speaking enthusiastically.`;
+}
+
 function CreateVideoTab({ script, topic }: { script: string | null; topic: string }) {
-  const [prompt, setPrompt]     = useState(() =>
-    script
-      ? `Cartoon animation of Spartan warrior mascot (small spartan in helmet, energetic, funny). Topic: "${topic}". Script: ${script.slice(0, 300)}. Style: 2D cartoon animation, Pixar-like, vibrant colors, dynamic movement, brand colors pink and dark.`
-      : ""
-  );
+  const [prompt, setPrompt]     = useState(() => buildPrompt(topic, script));
+  const [audioText, setAudioText] = useState(() => extractDialogue(script));
   const [model, setModel]       = useState("kling3_0");
   const [duration, setDuration] = useState(5);
+  const hasElevenLabs           = true; // controlled by ELEVENLABS_API_KEY on server
   const { state: renderState, videoUrl, progress, error: errorMsg, generate: runGen, reset } = useVideoGen({ direction: "cartoon", topic });
 
   const createVideo = () => {
     if (!prompt.trim()) return;
-    runGen({ prompt: prompt.trim(), model, duration, aspect_ratio: "9:16" });
+    runGen({
+      prompt: prompt.trim(),
+      model,
+      duration,
+      aspect_ratio: "9:16",
+      image_url: SPARTAN_CHARACTER_URL,
+      audio_text: audioText.trim() || undefined,
+    });
   };
 
   return (
@@ -225,6 +246,15 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
         </div>
       </div>
 
+      {/* Reference image preview */}
+      <div className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+        <img src={SPARTAN_CHARACTER_URL} alt="Спартанец АДОНИС" className="w-12 h-20 rounded-lg object-cover flex-shrink-0" />
+        <div>
+          <p className="text-xs font-semibold text-white mb-0.5">Референс персонажа</p>
+          <p className="text-[10px] text-slate-500 leading-relaxed">Спартанец с лого ADONIS на груди и фоном производства мерча — всегда постоянный</p>
+        </div>
+      </div>
+
       {/* Prompt */}
       <div>
         <label className="text-xs font-medium text-slate-400 mb-1.5 block">Промпт для анимации</label>
@@ -234,10 +264,23 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
         />
       </div>
 
+      {/* Russian voiceover text */}
+      <div>
+        <label className="text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-2">
+          Текст для озвучки (русский голос)
+          <span className="px-1.5 py-0.5 rounded text-[10px] bg-pink-500/20 text-pink-400">ElevenLabs</span>
+        </label>
+        <textarea value={audioText} onChange={(e) => setAudioText(e.target.value)} rows={3}
+          placeholder="Реплики Спартанца извлекаются автоматически из скрипта..."
+          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder-slate-600 outline-none focus:border-pink-500/40 transition-colors resize-none leading-relaxed"
+        />
+        <p className="text-[10px] text-slate-600 mt-1">Подростковый мужской голос · ElevenLabs multilingual · требует ELEVENLABS_API_KEY</p>
+      </div>
+
       {renderState === "idle" && (
         <button onClick={createVideo} disabled={!prompt.trim()}
           className="w-full py-4 rounded-2xl btn-ai text-white font-semibold text-sm flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
-          <Play className="w-5 h-5" /> Генерировать анимацию
+          <Play className="w-5 h-5" /> {audioText.trim() ? "Генерировать с голосом" : "Генерировать анимацию"}
         </button>
       )}
 
