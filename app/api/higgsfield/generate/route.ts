@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
+import { SPARTAN_CHARACTER_URL } from "@/lib/data/assets";
 
 const CREDENTIALS = process.env.HIGGSFIELD_API_KEY ?? "";
 const BASE_URL = "https://platform.higgsfield.ai";
@@ -52,11 +53,10 @@ export async function POST(req: NextRequest) {
   // Use wan2_7 (audio-synchronized) when audio is provided
   const selectedModel = audio_media_id ? "wan2_7" : model;
 
-  // input_images is REQUIRED by Higgsfield /v1/job-sets.
-  // Pass the reference image when provided, otherwise empty array (text-to-video mode).
-  const inputImages: unknown[] = image_url
-    ? [{ type: "image_url", image_url }]
-    : [];
+  // input_images is REQUIRED by Higgsfield /v1/job-sets — must have at least 1 item.
+  // Use provided image_url, or fall back to SPARTAN_CHARACTER_URL as reference.
+  const refImage = image_url || SPARTAN_CHARACTER_URL;
+  const inputImages: unknown[] = [{ type: "image_url", image_url: refImage }];
 
   const params: Record<string, unknown> = {
     prompt,
