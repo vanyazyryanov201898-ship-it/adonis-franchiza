@@ -191,14 +191,20 @@ const CARTOON_MODELS = [
   { id: "kling3_0",  label: "Kling 3.0",  desc: "Высокое качество · 10+ мин" },
 ];
 
-function extractDialogue(script: string | null): string {
+// ~2.5 words/sec for Russian speech
+const WORDS_PER_SEC = 2.5;
+
+function extractDialogue(script: string | null, maxWords?: number): string {
   if (!script) return "";
   const lines = script.split("\n");
   const replicas = lines
     .filter((l) => l.includes("Реплика:") || l.includes("реплика:"))
     .map((l) => l.replace(/.*[Рр]еплика:\s*["«]?/, "").replace(/["»]?\s*$/, "").trim())
     .filter(Boolean);
-  return replicas.join(" ");
+  const fullText = replicas.join(" ");
+  if (!maxWords) return fullText;
+  const words = fullText.split(/\s+/);
+  return words.slice(0, maxWords).join(" ");
 }
 
 function buildPrompt(topic: string, script: string | null): string {
@@ -208,9 +214,15 @@ function buildPrompt(topic: string, script: string | null): string {
 
 function CreateVideoTab({ script, topic }: { script: string | null; topic: string }) {
   const [prompt, setPrompt]       = useState(() => buildPrompt(topic, script));
-  const [audioText, setAudioText] = useState(() => extractDialogue(script));
-  const [model, setModel]         = useState("wan2_7");
   const [duration, setDuration]   = useState(5);
+  const [audioText, setAudioText] = useState(() => extractDialogue(script, Math.round(5 * WORDS_PER_SEC)));
+  const [model, setModel]         = useState("wan2_7");
+
+  // Re-trim audio text when user picks a different duration
+  useEffect(() => {
+    setAudioText(extractDialogue(script, Math.round(duration * WORDS_PER_SEC)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duration]);
   const [audioUrl, setAudioUrl]   = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError]     = useState<string | null>(null);
@@ -323,13 +335,19 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
         <div className="flex items-center gap-2 mb-1.5">
           <Mic className="w-3.5 h-3.5 text-pink-400" />
           <label className="text-xs font-medium text-slate-400">Текст озвучки · ElevenLabs</label>
-          <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">AI</span>
+          <span className="ml-auto text-[10px] text-slate-500">
+            ~{Math.round(duration * WORDS_PER_SEC)} слов · {duration} сек
+          </span>
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">AI</span>
         </div>
         <textarea value={audioText} onChange={(e) => setAudioText(e.target.value)} rows={3}
           placeholder="Реплики Спартанца для озвучки... (автозаполнение из монолога)"
           className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder-slate-600 outline-none focus:border-pink-500/40 transition-colors resize-none leading-relaxed"
         />
-        <p className="text-[10px] text-slate-600 mt-1">Аудио генерируется отдельно — слушай рядом с видео</p>
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-[10px] text-slate-600">Аудио генерируется отдельно — слушай рядом с видео</p>
+          <p className="text-[10px] text-slate-600">{audioText.trim().split(/\s+/).filter(Boolean).length} слов</p>
+        </div>
       </div>
 
       {renderState === "idle" && (
