@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { getSupabase } from "@/lib/db/supabase";
 
 export type VideoGenState = "idle" | "submitting" | "polling" | "done" | "error";
 
@@ -62,20 +61,26 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [direction]);
 
-  const saveToSupabase = async (row: Record<string, unknown>) => {
+  const saveToSupabase = async (row: Record<string, unknown>): Promise<string | null> => {
     try {
-      const sb = getSupabase();
-      if (!sb) return null;
-      const { data } = await sb.from("video_generations").insert(row).select("id").single();
-      return data?.id ?? null;
+      const res  = await fetch("/api/video-save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(row),
+      });
+      const json = await res.json();
+      return json.id ?? null;
     } catch { return null; }
   };
 
   const updateInSupabase = async (id: string, updates: Record<string, unknown>) => {
+    if (!id) return;
     try {
-      const sb = getSupabase();
-      if (!sb || !id) return;
-      await sb.from("video_generations").update(updates).eq("id", id);
+      await fetch("/api/video-save", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, updates }),
+      });
     } catch {}
   };
 

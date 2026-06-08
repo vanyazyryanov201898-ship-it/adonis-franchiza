@@ -223,16 +223,51 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
     setAudioText(extractDialogue(script, Math.round(duration * WORDS_PER_SEC)));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duration]);
-  const [audioUrl, setAudioUrl]   = useState<string | null>(null);
+  const [audioUrl, setAudioUrl]     = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError]     = useState<string | null>(null);
+  const [merging, setMerging]       = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+  const [mergedUrl, setMergedUrl]   = useState<string | null>(null);
+  const dbIdRef = useRef<string | null>(null);
 
   const { state: renderState, videoUrl, progress, error: errorMsg, debugInfo, generate: runGen, reset, checkNow } = useVideoGen({ direction: "cartoon", topic });
+
+  // When video completes and we have audioText → auto-merge
+  useEffect(() => {
+    if (renderState !== "done" || !videoUrl || !audioText.trim()) return;
+    if (merging || mergedUrl || mergeError) return;
+
+    setMerging(true);
+    setMergeError(null);
+
+    fetch("/api/merge-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        videoUrl,
+        audioText: audioText.trim(),
+        direction: "cartoon",
+        dbId: dbIdRef.current ?? undefined,
+      }),
+    }).then(async (r) => {
+      const json = await r.json();
+      if (r.ok && json.mergedUrl) {
+        setMergedUrl(json.mergedUrl);
+        // revoke preview blob if it existed
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+      } else {
+        setMergeError(json.error || "Ошибка объединения");
+      }
+    }).catch((e) => setMergeError(e.message))
+      .finally(() => setMerging(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renderState, videoUrl]);
 
   const createVideo = async () => {
     if (!prompt.trim()) return;
 
-    // Generate ElevenLabs audio in parallel (non-blocking for video start)
+    // Preview audio while video generates (non-blocking)
     if (audioText.trim()) {
       setAudioLoading(true);
       setAudioError(null);
@@ -266,6 +301,10 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl(null);
     setAudioError(null);
+    setMerging(false);
+    setMergeError(null);
+    setMergedUrl(null);
+    dbIdRef.current = null;
   };
 
   return (
@@ -418,21 +457,47 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
       {renderState === "done" && videoUrl && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           className="p-5 rounded-2xl border border-emerald-500/20 bg-emerald-900/10 space-y-3">
+
+          {/* Merging state */}
+          {merging && (
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
+              <Loader2 className="w-4 h-4 text-violet-400 animate-spin flex-shrink-0" />
+              <div>
+                <p className="text-xs text-white font-medium">Накладываю озвучку на видео...</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">FFmpeg объединяет видео + ElevenLabs аудио</p>
+              </div>
+            </div>
+          )}
+
+          {/* Merge error — show original video */}
+          {!merging && mergeError && (
+            <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-400">
+              Наложение звука не удалось: {mergeError}. Видео без звука:
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-emerald-400" />
-            <span className="text-sm text-white font-semibold">Анимация готова!</span>
+            {mergedUrl ? (
+              <><CheckCircle2 className="w-5 h-5 text-emerald-400" /><span className="text-sm text-white font-semibold">Готово! Видео со звуком 🎙</span></>
+            ) : (
+              <><Zap className="w-5 h-5 text-emerald-400" /><span className="text-sm text-white font-semibold">Анимация готова!</span></>
+            )}
           </div>
-          <video src={videoUrl} controls className="w-full rounded-xl" />
+
+          {/* Video player — show merged if ready, otherwise original */}
+          <video src={mergedUrl ?? videoUrl} controls className="w-full rounded-xl" />
+
           <div className="flex items-center gap-2">
-            <a href={`/api/download?url=${encodeURIComponent(videoUrl)}`}
+            <a href={`/api/download?url=${encodeURIComponent(mergedUrl ?? videoUrl)}`}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-sm text-blue-300 font-medium transition-all">
-              <Download className="w-4 h-4" /> Скачать видео
+              <Download className="w-4 h-4" /> Скачать{mergedUrl ? " (со звуком)" : ""}
             </a>
-            <a href={videoUrl} target="_blank" rel="noopener noreferrer"
+            <a href={mergedUrl ?? videoUrl} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-sm text-emerald-300 font-medium transition-all">
               <ExternalLink className="w-4 h-4" /> Открыть
             </a>
           </div>
+
           <button onClick={handleReset} className="w-full py-2 rounded-xl bg-white/[0.04] text-xs text-slate-500 hover:text-slate-300 transition-colors">
             Создать ещё
           </button>
