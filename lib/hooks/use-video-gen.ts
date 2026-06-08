@@ -125,8 +125,8 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
       setProgress(prog);
     }, 2_000);
 
-    // Fallback: every 3 min do a direct status check in case SSE missed the "completed" event
-    // (Netlify kills long-running SSE functions; EventSource reconnects but may miss the completion)
+    // Fallback: every 60s do a direct status check in case SSE missed the "completed" event
+    // (Railway kills long-running SSE connections; EventSource reconnects but may miss completion)
     fallbackRef.current = setInterval(async () => {
       try {
         const r = await fetch(`/api/higgsfield/status/${higgsId}`);
@@ -141,7 +141,7 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
           if (dbId) updateInSupabase(dbId, { status: "failed" });
         }
       } catch { /* ignore */ }
-    }, 3 * 60 * 1000);
+    }, 60 * 1000);
 
     const es = new EventSource(`/api/higgsfield/stream/${higgsId}`);
     esRef.current = es;
