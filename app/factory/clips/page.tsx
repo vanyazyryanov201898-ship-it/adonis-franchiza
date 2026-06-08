@@ -2,14 +2,14 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Scissors, Sparkles, RefreshCw, Copy, Check, AlertCircle, Zap, Link2, Upload, X, FileVideo, ChevronDown } from "lucide-react";
+import { Scissors, RefreshCw, Copy, Check, AlertCircle, Zap, Link2, Upload, X, FileVideo, ChevronDown, Play, Loader2, Film, ExternalLink } from "lucide-react";
 import DirectionLayout, { type Tab } from "@/components/factory/DirectionLayout";
 import ContentPlanTab from "@/components/factory/ContentPlanTab";
-import ApiKeyPlaceholder from "@/components/factory/ApiKeyPlaceholder";
 import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelector";
 import AutopostTab from "@/components/factory/AutopostTab";
 import VideoPromptPanel from "@/components/factory/VideoPromptPanel";
 import { useBgTask } from "@/lib/hooks/use-bg-task";
+import { useVideoGen } from "@/lib/hooks/use-video-gen";
 import { PLATFORMS, DIRECTION_DEFAULT_PLATFORMS } from "@/lib/data/platforms";
 import { cn } from "@/lib/utils";
 
@@ -274,6 +274,148 @@ function BrollSection({ script, topic }: { script: string; topic: string }) {
   );
 }
 
+const CLIP_MODELS = [
+  { id: "kling3_0",    label: "Kling 3.0",    sub: "multi-shot · кино" },
+  { id: "seedance_2_0", label: "Seedance 2.0", sub: "стабильность · референс" },
+];
+const CLIP_DURATIONS = [
+  { sec: 5,  label: "5 сек",  credits: "~10 кр" },
+  { sec: 10, label: "10 сек", credits: "~20 кр" },
+  { sec: 15, label: "15 сек", credits: "~30 кр" },
+];
+
+function ClipsCreateTab() {
+  const [model,    setModel]    = useState(CLIP_MODELS[0].id);
+  const [duration, setDuration] = useState(5);
+  const [prompt,   setPrompt]   = useState("Cinematic short clip: documentary style, ADONIS merch franchise story. Dynamic camera movement, professional production, Russian market context. Authentic moments, real people, brand identity.");
+
+  const { state, videoUrl, progress, error, debugInfo, generate, reset } = useVideoGen({
+    direction: "clips",
+    topic: "Нарезка клипа",
+  });
+
+  const runGen = () => generate({ prompt: prompt.trim(), model, duration, aspect_ratio: "9:16" });
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-3 pb-1">
+        <Film className="w-5 h-5 text-blue-400" />
+        <div>
+          <h3 className="text-sm font-semibold text-white">Создать видео · Higgsfield AI</h3>
+          <p className="text-[11px] text-slate-500">Кинематографический клип без референс-изображения</p>
+        </div>
+      </div>
+
+      {/* Model */}
+      <div>
+        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Модель</p>
+        <div className="grid grid-cols-2 gap-2">
+          {CLIP_MODELS.map((m) => (
+            <button key={m.id} onClick={() => setModel(m.id)}
+              className={cn("p-3 rounded-xl border text-left transition-all", model === m.id
+                ? "border-blue-500/50 bg-blue-500/10"
+                : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]")}>
+              <p className={cn("text-sm font-semibold", model === m.id ? "text-blue-300" : "text-slate-300")}>{m.label}</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">{m.sub}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Duration */}
+      <div>
+        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Длительность</p>
+        <div className="grid grid-cols-3 gap-2">
+          {CLIP_DURATIONS.map((d) => (
+            <button key={d.sec} onClick={() => setDuration(d.sec)}
+              className={cn("p-3 rounded-xl border text-center transition-all", duration === d.sec
+                ? "border-blue-500/50 bg-blue-500/10"
+                : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]")}>
+              <p className={cn("text-sm font-bold", duration === d.sec ? "text-blue-300" : "text-slate-300")}>{d.label}</p>
+              <p className="text-[10px] text-slate-500">{d.credits}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Prompt */}
+      <div>
+        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Промпт для видео</p>
+        <textarea
+          value={prompt} onChange={(e) => setPrompt(e.target.value)}
+          rows={5}
+          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder-slate-600 outline-none focus:border-blue-500/40 transition-colors resize-none font-mono text-xs leading-relaxed"
+        />
+      </div>
+
+      {/* Generate / Status */}
+      {state === "idle" && (
+        <button onClick={runGen}
+          className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold text-sm flex items-center justify-center gap-3 transition-all">
+          <Film className="w-5 h-5" />Создать клип · Higgsfield AI
+        </button>
+      )}
+
+      {state === "submitting" && (
+        <div className="py-4 flex items-center justify-center gap-3 text-sm text-slate-400">
+          <Loader2 className="w-5 h-5 animate-spin text-blue-400" />Отправляю в Higgsfield...
+        </div>
+      )}
+
+      {state === "polling" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin text-blue-400" />Генерирую видео... {progress}%</span>
+            <span className="text-slate-600">обычно 2–5 минут</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <motion.div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"
+              style={{ width: `${progress}%` }} transition={{ duration: 0.5 }} />
+          </div>
+          <button onClick={reset} className="text-xs text-slate-600 hover:text-slate-400 transition-colors">
+            Отменить и начать заново
+          </button>
+        </div>
+      )}
+
+      {state === "done" && videoUrl && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 overflow-hidden">
+            <video src={videoUrl} controls className="w-full rounded-t-2xl" />
+            <div className="p-4 flex items-center gap-3">
+              <a href={videoUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors">
+                <ExternalLink className="w-4 h-4" />Скачать MP4
+              </a>
+              <button onClick={reset} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.08] text-slate-400 hover:text-white text-sm transition-colors">
+                <RefreshCw className="w-4 h-4" />Новый клип
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {state === "done" && !videoUrl && (
+        <div className="p-4 rounded-xl border border-yellow-500/20 bg-yellow-500/5 text-sm text-yellow-400">
+          Видео готово, но URL не получен. Проверьте историю на дашборде.
+          {debugInfo && <p className="text-xs mt-1 text-yellow-600">{debugInfo}</p>}
+          <button onClick={reset} className="mt-2 text-xs underline">Попробовать снова</button>
+        </div>
+      )}
+
+      {state === "error" && (
+        <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/5 space-y-2">
+          <div className="flex items-center gap-2 text-sm text-red-400">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />{error}
+          </div>
+          <button onClick={reset} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Попробовать снова</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ClipsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("script");
   return (
@@ -286,15 +428,7 @@ export default function ClipsPage() {
     >
       {activeTab === "script" && <ScriptTab />}
       {activeTab === "plan" && <ContentPlanTab directionLabel="Нарезка роликов" directionId="clips" />}
-      {activeTab === "create" && (
-        <div className="p-6">
-          <ApiKeyPlaceholder
-            serviceName="Видео-редактор"
-            description="Для автоматической нарезки видео нужен API видео-редактора (например Shotstack или Creatomate). Скоро настроим."
-            envKey="SHOTSTACK_API_KEY"
-          />
-        </div>
-      )}
+      {activeTab === "create" && <ClipsCreateTab />}
       {activeTab === "autopost" && <AutopostTab directionId="clips" directionLabel="Нарезка" />}
     </DirectionLayout>
   );

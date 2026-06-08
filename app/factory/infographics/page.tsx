@@ -430,9 +430,9 @@ function ScriptTab({
 // ─── Create Video Tab ─────────────────────────────────────────────────────────
 
 const MODELS = [
-  { id: "kling3_0",              label: "Kling 3.0",         desc: "Multi-shot · аудио · быстро" },
-  { id: "cinematic_studio_3_0",  label: "Cinema Studio 3.0", desc: "Higgsfield · топ качество" },
-  { id: "grok_video",            label: "Grok Imagine",      desc: "xAI · text-to-video · аудио" },
+  { id: "kling3_0",      label: "Kling 3.0",      desc: "Multi-shot · data anim · быстро" },
+  { id: "seedance_2_0",  label: "Seedance 2.0",   desc: "Bytedance · стабильность · 1080p" },
+  { id: "cinematic_studio_3_0", label: "Cinema Studio", desc: "Higgsfield · топ качество" },
 ];
 
 const DURATIONS = [

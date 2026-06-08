@@ -119,11 +119,10 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
     };
 
     es.onerror = () => {
-      // SSE connection dropped — this is normal after completion (server closes)
-      // Only treat as error if we're still in polling state
-      clearInterval(ticker);
-      stopStream();
-      // Don't mark as error here — the server might have sent "completed" before closing
+      // Connection dropped — EventSource will auto-reconnect.
+      // When it reconnects the server immediately re-polls Higgsfield;
+      // if the job is done it sends "completed" right away.
+      // Do NOT stopStream() here — that would disable reconnection.
     };
   };
 
