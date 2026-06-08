@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, RefreshCw, Copy, Check, AlertCircle, Zap, Shield, Play, Video, ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
+import { Sparkles, RefreshCw, Copy, Check, AlertCircle, Zap, Shield, Play, Video, ExternalLink, Loader2, CheckCircle2, Download, Volume2, Mic } from "lucide-react";
 import { useVideoGen } from "@/lib/hooks/use-video-gen";
 import DirectionLayout, { type Tab } from "@/components/factory/DirectionLayout";
 import ContentPlanTab from "@/components/factory/ContentPlanTab";
@@ -207,23 +207,53 @@ function buildPrompt(topic: string, script: string | null): string {
 }
 
 function CreateVideoTab({ script, topic }: { script: string | null; topic: string }) {
-  const [prompt, setPrompt]     = useState(() => buildPrompt(topic, script));
+  const [prompt, setPrompt]       = useState(() => buildPrompt(topic, script));
   const [audioText, setAudioText] = useState(() => extractDialogue(script));
-  const [model, setModel]       = useState("wan2_7");
-  const [duration, setDuration] = useState(5);
-  const hasElevenLabs           = true; // controlled by ELEVENLABS_API_KEY on server
+  const [model, setModel]         = useState("wan2_7");
+  const [duration, setDuration]   = useState(5);
+  const [audioUrl, setAudioUrl]   = useState<string | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audioError, setAudioError]     = useState<string | null>(null);
+
   const { state: renderState, videoUrl, progress, error: errorMsg, debugInfo, generate: runGen, reset, checkNow } = useVideoGen({ direction: "cartoon", topic });
 
-  const createVideo = () => {
+  const createVideo = async () => {
     if (!prompt.trim()) return;
+
+    // Generate ElevenLabs audio in parallel (non-blocking for video start)
+    if (audioText.trim()) {
+      setAudioLoading(true);
+      setAudioError(null);
+      fetch("/api/elevenlabs/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: audioText.trim() }),
+      }).then(async (r) => {
+        if (r.ok) {
+          const blob = await r.blob();
+          setAudioUrl(URL.createObjectURL(blob));
+        } else {
+          const err = await r.json().catch(() => ({}));
+          setAudioError(err.error || `TTS ошибка ${r.status}`);
+        }
+      }).catch((e) => setAudioError(e.message))
+        .finally(() => setAudioLoading(false));
+    }
+
     runGen({
       prompt: prompt.trim(),
       model,
       duration,
       aspect_ratio: "9:16",
       image_url: SPARTAN_CHARACTER_URL,
-      audio_text: audioText.trim() || undefined,
     });
+  };
+
+  const handleReset = () => {
+    reset();
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioUrl(null);
+    setAudioError(null);
   };
 
   return (
@@ -288,13 +318,18 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
         />
       </div>
 
-      {/* Russian voiceover — disabled until Higgsfield media upload API is accessible */}
-      <div className="p-3 rounded-xl border border-white/[0.06] bg-white/[0.02] flex items-start gap-2.5 opacity-60">
-        <AlertCircle className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-xs text-slate-400 font-medium">Озвучка временно недоступна</p>
-          <p className="text-[10px] text-slate-600 mt-0.5">ElevenLabs API подключён, но Higgsfield media upload пока не отвечает. Видео генерируется без голоса.</p>
+      {/* ElevenLabs voiceover */}
+      <div>
+        <div className="flex items-center gap-2 mb-1.5">
+          <Mic className="w-3.5 h-3.5 text-pink-400" />
+          <label className="text-xs font-medium text-slate-400">Текст озвучки · ElevenLabs</label>
+          <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">AI</span>
         </div>
+        <textarea value={audioText} onChange={(e) => setAudioText(e.target.value)} rows={3}
+          placeholder="Реплики Спартанца для озвучки... (автозаполнение из монолога)"
+          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder-slate-600 outline-none focus:border-pink-500/40 transition-colors resize-none leading-relaxed"
+        />
+        <p className="text-[10px] text-slate-600 mt-1">Аудио генерируется отдельно — слушай рядом с видео</p>
       </div>
 
       {renderState === "idle" && (
@@ -302,6 +337,36 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
           className="w-full py-4 rounded-2xl btn-ai text-white font-semibold text-sm flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
           <Play className="w-5 h-5" /> Генерировать анимацию
         </button>
+      )}
+
+      {/* Audio loading/ready indicator (visible during polling and done) */}
+      {(renderState === "polling" || renderState === "done") && audioText.trim() && (
+        <div className={`p-3 rounded-xl border flex items-center gap-2.5 ${
+          audioLoading ? "border-violet-500/20 bg-violet-500/5"
+          : audioError  ? "border-red-500/20 bg-red-500/5"
+          : audioUrl    ? "border-emerald-500/20 bg-emerald-500/5"
+          : "border-white/[0.06] bg-white/[0.02]"
+        }`}>
+          {audioLoading ? (
+            <><Loader2 className="w-4 h-4 text-violet-400 animate-spin flex-shrink-0" />
+              <span className="text-xs text-slate-400">Генерирую озвучку ElevenLabs...</span></>
+          ) : audioError ? (
+            <><AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <span className="text-xs text-red-400">{audioError}</span></>
+          ) : audioUrl ? (
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Volume2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span className="text-xs text-emerald-400 font-medium">Озвучка готова · ElevenLabs</span>
+              </div>
+              <audio src={audioUrl} controls className="w-full h-8" style={{ colorScheme: "dark" }} />
+              <a href={audioUrl} download="spartan-voice.mp3"
+                className="mt-1.5 flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 transition-colors">
+                <Download className="w-3 h-3" /> Скачать аудио
+              </a>
+            </div>
+          ) : null}
+        </div>
       )}
 
       {renderState === "submitting" && (
@@ -340,11 +405,17 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
             <span className="text-sm text-white font-semibold">Анимация готова!</span>
           </div>
           <video src={videoUrl} controls className="w-full rounded-xl" />
-          <a href={videoUrl} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-sm text-emerald-300 font-medium transition-all">
-            <ExternalLink className="w-4 h-4" /> Скачать / открыть
-          </a>
-          <button onClick={reset} className="w-full py-2 rounded-xl bg-white/[0.04] text-xs text-slate-500 hover:text-slate-300 transition-colors">
+          <div className="flex items-center gap-2">
+            <a href={`/api/download?url=${encodeURIComponent(videoUrl)}`}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-sm text-blue-300 font-medium transition-all">
+              <Download className="w-4 h-4" /> Скачать видео
+            </a>
+            <a href={videoUrl} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-sm text-emerald-300 font-medium transition-all">
+              <ExternalLink className="w-4 h-4" /> Открыть
+            </a>
+          </div>
+          <button onClick={handleReset} className="w-full py-2 rounded-xl bg-white/[0.04] text-xs text-slate-500 hover:text-slate-300 transition-colors">
             Создать ещё
           </button>
         </motion.div>
@@ -357,7 +428,7 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
             <span className="text-sm text-white font-semibold">Готово, но URL не получен</span>
           </div>
           {debugInfo && <p className="text-xs text-slate-400 font-mono break-all">{debugInfo}</p>}
-          <button onClick={reset} className="px-4 py-2 rounded-xl bg-white/[0.06] text-sm text-white hover:bg-white/[0.1] transition-colors">
+          <button onClick={handleReset} className="px-4 py-2 rounded-xl bg-white/[0.06] text-sm text-white hover:bg-white/[0.1] transition-colors">
             Попробовать снова
           </button>
         </div>
@@ -370,7 +441,7 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
             <span className="text-sm text-white font-semibold">Ошибка генерации</span>
           </div>
           <p className="text-sm text-red-400">{errorMsg}</p>
-          <button onClick={reset} className="px-4 py-2 rounded-xl bg-white/[0.06] text-sm text-white hover:bg-white/[0.1] transition-colors">
+          <button onClick={handleReset} className="px-4 py-2 rounded-xl bg-white/[0.06] text-sm text-white hover:bg-white/[0.1] transition-colors">
             Попробовать снова
           </button>
         </div>
