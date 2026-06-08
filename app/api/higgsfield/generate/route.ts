@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "prompt required" }, { status: 400 });
   }
 
-  // Use wan2_7 (audio-synchronized) when audio is provided
+  // Use wan2_7 for audio-synchronized generation (lipsync), otherwise use the selected model.
+  // All Higgsfield /v1/job-sets models are image-to-video — callers must always provide image_url.
   const selectedModel = audio_media_id ? "wan2_7" : model;
 
   const params: Record<string, unknown> = {

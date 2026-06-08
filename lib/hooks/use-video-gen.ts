@@ -26,10 +26,15 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
   const [error, setError]         = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const esRef                     = useRef<EventSource | null>(null);
+  const tickerRef                 = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fallbackRef               = useRef<ReturnType<typeof setInterval> | null>(null);
+  const higgsIdRef                = useRef<string | null>(null);
   const dbIdRef                   = useRef<string | null>(null);
 
   const stopStream = () => {
     if (esRef.current) { esRef.current.close(); esRef.current = null; }
+    if (tickerRef.current) { clearInterval(tickerRef.current); tickerRef.current = null; }
+    if (fallbackRef.current) { clearInterval(fallbackRef.current); fallbackRef.current = null; }
   };
 
   useEffect(() => {
@@ -44,11 +49,12 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
       const job: StoredJob = JSON.parse(stored);
       if (job.direction !== direction) return;
       const age = Date.now() - job.startedAt;
-      if (age > 15 * 60 * 1000) { // 15 min matches server cap
+      if (age > 15 * 60 * 1000) {
         localStorage.removeItem(STORAGE_KEY);
         return;
       }
       dbIdRef.current = job.dbId;
+      higgsIdRef.current = job.higgsId;
       setState("polling");
       setProgress(Math.min(10 + Math.floor(age / 2000), 95));
       startStream(job.higgsId, job.dbId);
@@ -73,15 +79,69 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
     } catch {}
   };
 
+  const handleCompletion = (url: string | null, dbId: string | null) => {
+    stopStream();
+    localStorage.removeItem(STORAGE_KEY);
+    setProgress(100);
+    setVideoUrl(url);
+    setState("done");
+    if (!url) {
+      setDebugInfo("Видео готово, но URL не получен. Проверьте историю на дашборде.");
+    }
+    if (dbId) updateInSupabase(dbId, {
+      status: "completed",
+      video_url: url,
+      completed_at: new Date().toISOString(),
+    });
+  };
+
+  const checkNow = async () => {
+    const hId = higgsIdRef.current;
+    if (!hId) return;
+    const dbId = dbIdRef.current;
+    try {
+      const r = await fetch(`/api/higgsfield/status/${hId}`);
+      const d = await r.json();
+      if (d.status === "completed") {
+        handleCompletion(d.url ?? null, dbId);
+      } else if (d.status === "failed") {
+        stopStream();
+        localStorage.removeItem(STORAGE_KEY);
+        setError(d.error || "Ошибка рендера на Higgsfield");
+        setState("error");
+        if (dbId) updateInSupabase(dbId, { status: "failed" });
+      }
+    } catch { /* ignore */ }
+  };
+
   const startStream = (higgsId: string, dbId: string | null) => {
     stopStream();
+    higgsIdRef.current = higgsId;
 
     // Animate progress smoothly up to 95% while waiting
     let prog = 10;
-    const ticker = setInterval(() => {
+    tickerRef.current = setInterval(() => {
       prog = Math.min(prog + 1, 95);
       setProgress(prog);
     }, 2_000);
+
+    // Fallback: every 3 min do a direct status check in case SSE missed the "completed" event
+    // (Netlify kills long-running SSE functions; EventSource reconnects but may miss the completion)
+    fallbackRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/higgsfield/status/${higgsId}`);
+        const d = await r.json();
+        if (d.status === "completed") {
+          handleCompletion(d.url ?? null, dbId);
+        } else if (d.status === "failed") {
+          stopStream();
+          localStorage.removeItem(STORAGE_KEY);
+          setError(d.error || "Ошибка рендера на Higgsfield");
+          setState("error");
+          if (dbId) updateInSupabase(dbId, { status: "failed" });
+        }
+      } catch { /* ignore */ }
+    }, 3 * 60 * 1000);
 
     const es = new EventSource(`/api/higgsfield/stream/${higgsId}`);
     esRef.current = es;
@@ -91,30 +151,15 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
         const msg = JSON.parse(e.data) as { status: string; url?: string; error?: string };
 
         if (msg.status === "completed") {
-          clearInterval(ticker);
-          stopStream();
-          localStorage.removeItem(STORAGE_KEY);
-          setProgress(100);
-          const url = msg.url ?? null;
-          setVideoUrl(url);
-          setState("done");
-          if (!url) {
-            setDebugInfo("Видео готово, но URL не получен. Проверьте историю на дашборде.");
-          }
-          if (dbId) updateInSupabase(dbId, {
-            status: "completed",
-            video_url: url,
-            completed_at: new Date().toISOString(),
-          });
+          handleCompletion(msg.url ?? null, dbId);
         } else if (msg.status === "failed") {
-          clearInterval(ticker);
           stopStream();
           localStorage.removeItem(STORAGE_KEY);
           setError(msg.error || "Ошибка рендера на Higgsfield");
           setState("error");
           if (dbId) updateInSupabase(dbId, { status: "failed" });
         }
-        // "processing" — just a heartbeat, progress ticker handles the bar
+        // "processing" — heartbeat only, progress ticker handles the bar
       } catch {}
     };
 
@@ -215,8 +260,9 @@ export function useVideoGen({ direction, topic }: UseVideoGenOptions) {
     setProgress(0);
     setError(null);
     setDebugInfo(null);
+    higgsIdRef.current = null;
     dbIdRef.current = null;
   };
 
-  return { state, videoUrl, progress, error, debugInfo, generate, reset };
+  return { state, videoUrl, progress, error, debugInfo, generate, reset, checkNow };
 }

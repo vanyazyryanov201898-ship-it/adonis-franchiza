@@ -15,6 +15,7 @@ import TrendsSelector, { type TrendItem } from "@/components/factory/TrendsSelec
 import AutopostTab from "@/components/factory/AutopostTab";
 import VideoPromptPanel from "@/components/factory/VideoPromptPanel";
 import { useBgTask } from "@/lib/hooks/use-bg-task";
+import { DARK_BG_PLACEHOLDER_URL } from "@/lib/data/assets";
 import type { InfographicData, InfographicFrame } from "@/lib/types/infographic-types";
 import { PLATFORMS, DIRECTION_DEFAULT_PLATFORMS } from "@/lib/data/platforms";
 import { cn } from "@/lib/utils";
@@ -430,9 +431,8 @@ function ScriptTab({
 // ─── Create Video Tab ─────────────────────────────────────────────────────────
 
 const MODELS = [
-  { id: "kling3_0",      label: "Kling 3.0",      desc: "Multi-shot · data anim · быстро" },
-  { id: "seedance_2_0",  label: "Seedance 2.0",   desc: "Bytedance · стабильность · 1080p" },
-  { id: "cinematic_studio_3_0", label: "Cinema Studio", desc: "Higgsfield · топ качество" },
+  { id: "wan2_7", label: "WAN 2.7",      desc: "Text-to-video · стабильность" },
+  { id: "wan2_1", label: "WAN 2.1",      desc: "Text-to-video · быстро" },
 ];
 
 const DURATIONS = [
@@ -443,7 +443,7 @@ const DURATIONS = [
 
 function CreateVideoTab({ infographicData }: { infographicData: InfographicData | null }) {
   const [prompt, setPrompt]       = useState("");
-  const [model, setModel]         = useState("kling3_0");
+  const [model, setModel]         = useState("wan2_7");
   const [duration, setDuration]   = useState(5);
   const { state: renderState, videoUrl, progress, error: errorMsg, debugInfo, generate: runGen, reset } = useVideoGen({ direction: "infographics", topic: infographicData?.title });
 
@@ -463,7 +463,8 @@ function CreateVideoTab({ infographicData }: { infographicData: InfographicData 
 
   const createVideo = () => {
     if (!prompt.trim()) return;
-    runGen({ prompt: prompt.trim(), model, duration, aspect_ratio: "9:16" });
+    // Higgsfield /v1/job-sets always requires input_images — use dark placeholder for pure t2v
+    runGen({ prompt: prompt.trim(), model, duration, aspect_ratio: "9:16", image_url: DARK_BG_PLACEHOLDER_URL });
   };
 
   return (

@@ -10,6 +10,7 @@ import AutopostTab from "@/components/factory/AutopostTab";
 import VideoPromptPanel from "@/components/factory/VideoPromptPanel";
 import { useBgTask } from "@/lib/hooks/use-bg-task";
 import { useVideoGen } from "@/lib/hooks/use-video-gen";
+import { SPARTAN_CHARACTER_URL } from "@/lib/data/assets";
 import { PLATFORMS, DIRECTION_DEFAULT_PLATFORMS } from "@/lib/data/platforms";
 import { cn } from "@/lib/utils";
 
@@ -275,8 +276,8 @@ function BrollSection({ script, topic }: { script: string; topic: string }) {
 }
 
 const CLIP_MODELS = [
-  { id: "kling3_0",    label: "Kling 3.0",    sub: "multi-shot · кино" },
-  { id: "seedance_2_0", label: "Seedance 2.0", sub: "стабильность · референс" },
+  { id: "wan2_7", label: "WAN 2.7", sub: "text-to-video · стабильность" },
+  { id: "wan2_1", label: "WAN 2.1", sub: "text-to-video · быстро" },
 ];
 const CLIP_DURATIONS = [
   { sec: 5,  label: "5 сек",  credits: "~10 кр" },
@@ -294,7 +295,8 @@ function ClipsCreateTab() {
     topic: "Нарезка клипа",
   });
 
-  const runGen = () => generate({ prompt: prompt.trim(), model, duration, aspect_ratio: "9:16" });
+  // Higgsfield /v1/job-sets always requires input_images — use Spartan as ADONIS brand reference for clips
+  const runGen = () => generate({ prompt: prompt.trim(), model, duration, aspect_ratio: "9:16", image_url: SPARTAN_CHARACTER_URL });
 
   return (
     <div className="space-y-4">

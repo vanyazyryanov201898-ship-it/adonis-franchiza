@@ -186,9 +186,9 @@ const DURATIONS = [
 ];
 
 const CARTOON_MODELS = [
-  { id: "kling3_0",             label: "Kling 3.0",         desc: "Multi-shot · аудио · быстро" },
-  { id: "cinematic_studio_3_0", label: "Cinema Studio 3.0", desc: "Higgsfield · топ качество" },
-  { id: "grok_video",           label: "Grok Imagine",      desc: "xAI · text-to-video · аудио" },
+  { id: "wan2_7",    label: "WAN 2.7",    desc: "Рекомендуем · 2–3 мин" },
+  { id: "dop-turbo", label: "DOP Turbo",  desc: "Higgsfield · экспериментальный" },
+  { id: "kling3_0",  label: "Kling 3.0",  desc: "Высокое качество · 10+ мин" },
 ];
 
 function extractDialogue(script: string | null): string {
@@ -209,10 +209,10 @@ function buildPrompt(topic: string, script: string | null): string {
 function CreateVideoTab({ script, topic }: { script: string | null; topic: string }) {
   const [prompt, setPrompt]     = useState(() => buildPrompt(topic, script));
   const [audioText, setAudioText] = useState(() => extractDialogue(script));
-  const [model, setModel]       = useState("kling3_0");
+  const [model, setModel]       = useState("wan2_7");
   const [duration, setDuration] = useState(5);
   const hasElevenLabs           = true; // controlled by ELEVENLABS_API_KEY on server
-  const { state: renderState, videoUrl, progress, error: errorMsg, debugInfo, generate: runGen, reset } = useVideoGen({ direction: "cartoon", topic });
+  const { state: renderState, videoUrl, progress, error: errorMsg, debugInfo, generate: runGen, reset, checkNow } = useVideoGen({ direction: "cartoon", topic });
 
   const createVideo = () => {
     if (!prompt.trim()) return;
@@ -288,23 +288,19 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
         />
       </div>
 
-      {/* Russian voiceover text */}
-      <div>
-        <label className="text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-2">
-          Текст для озвучки (русский голос)
-          <span className="px-1.5 py-0.5 rounded text-[10px] bg-pink-500/20 text-pink-400">ElevenLabs</span>
-        </label>
-        <textarea value={audioText} onChange={(e) => setAudioText(e.target.value)} rows={3}
-          placeholder="Реплики Спартанца извлекаются автоматически из скрипта..."
-          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder-slate-600 outline-none focus:border-pink-500/40 transition-colors resize-none leading-relaxed"
-        />
-        <p className="text-[10px] text-slate-600 mt-1">Подростковый мужской голос · ElevenLabs multilingual · требует ELEVENLABS_API_KEY</p>
+      {/* Russian voiceover — disabled until Higgsfield media upload API is accessible */}
+      <div className="p-3 rounded-xl border border-white/[0.06] bg-white/[0.02] flex items-start gap-2.5 opacity-60">
+        <AlertCircle className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-xs text-slate-400 font-medium">Озвучка временно недоступна</p>
+          <p className="text-[10px] text-slate-600 mt-0.5">ElevenLabs API подключён, но Higgsfield media upload пока не отвечает. Видео генерируется без голоса.</p>
+        </div>
       </div>
 
       {renderState === "idle" && (
         <button onClick={createVideo} disabled={!prompt.trim()}
           className="w-full py-4 rounded-2xl btn-ai text-white font-semibold text-sm flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
-          <Play className="w-5 h-5" /> {audioText.trim() ? "Генерировать с голосом" : "Генерировать анимацию"}
+          <Play className="w-5 h-5" /> Генерировать анимацию
         </button>
       )}
 
@@ -325,9 +321,14 @@ function CreateVideoTab({ script, topic }: { script: string | null; topic: strin
               animate={{ width: `${Math.max(progress, 5)}%` }} transition={{ duration: 0.8 }} />
           </div>
           <p className="text-xs text-slate-500">Higgsfield AI генерирует — обычно 3–10 минут</p>
-          <button onClick={reset} className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors underline">
-            Отменить и начать заново
-          </button>
+          <div className="flex items-center gap-4">
+            <button onClick={checkNow} className="text-[10px] text-pink-400 hover:text-pink-300 transition-colors underline">
+              Проверить готовность
+            </button>
+            <button onClick={reset} className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors underline">
+              Отменить и начать заново
+            </button>
+          </div>
         </div>
       )}
 

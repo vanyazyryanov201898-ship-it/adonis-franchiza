@@ -49,9 +49,15 @@ export async function GET(
 
           if (["completed", "succeeded", "done"].includes(rawStatus)) {
             const url: string | null =
-              firstJob.results?.rawUrl ||
-              firstJob.results?.url    ||
-              data.result_url          ||
+              data.result_url            ||
+              firstJob.result_url        ||
+              firstJob.results?.rawUrl   ||
+              firstJob.results?.raw?.url ||
+              firstJob.results?.url      ||
+              firstJob.output_url        ||
+              firstJob.video_url         ||
+              data.output_url            ||
+              (Array.isArray(data.outputs) ? data.outputs[0]?.url : null) ||
               null;
             controller.enqueue(sseEvent({ status: "completed", url }));
             break;
